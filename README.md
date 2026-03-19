@@ -95,8 +95,8 @@
 
 ## 🎥 시연 영상
 
-### [인도 무단횡단 감지 시연]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/횡단보도무단횡단.mp4))
-[![인도무단횡단](gif/display/횡단보도무단횡단.gif)](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/횡단보도무단횡단.mp4))
+### [인도 무단횡단 감지 시연]
+[![인도무단횡단](gif/display/횡단보도무단횡단.gif)]
 
 ### [차도 무단횡단 감지 시연]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/차도무단횡단.mp4))
 ![차도무단횡단](gif/display/차도무단횡단.gif)
@@ -110,7 +110,7 @@
 ### [차량 횡단보도 침범]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/차량횡단보도침범.mp4))
 ![차량침범](gif/display/차량횡단보도침범.gif)
 
-### [긴급상황 사고]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/긴급상황사고최종.mp4))
+### [긴급상황 사고](https://drive.google.com/file/d/11_sgPJO63pYdR7drzoCO-xOwAlElfMGV/view?usp=sharing))
 ![긴급상황사고](gif/display/긴급상황사고최종.gif)
 
 ### [긴급 차 비켜주기]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/긴급차비켜주기.mp4))
