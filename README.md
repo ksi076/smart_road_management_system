@@ -96,7 +96,7 @@
 ## 🎥 시연 영상
 
 ### [인도 무단횡단 감지 시연]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/횡단보도무단횡단.mp4))
-![인도무단횡단](gif/display/횡단보도무단횡단.gif)
+![인도무단횡단](gif/display/횡단보도무단횡단.gif)(https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/횡단보도무단횡단.mp4))
 
 ### [차도 무단횡단 감지 시연]([영상 보기](https://raw.githubusercontent.com/ksi076/smart_road_management_system/main/video/display/차도무단횡단.mp4))
 ![차도무단횡단](gif/display/차도무단횡단.gif)
