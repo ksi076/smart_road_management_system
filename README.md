@@ -123,7 +123,7 @@
 ### 🚦 신호등을 사람으로 잘못 인식하는 문제
 
 <p>
-<img src="img/신호등트러블1.png" width="300"/>
+<img src="img/신호등트러블슈팅.png" width="300"/>
 <img src="img/신호등트러블슈팅해결.png" width="300"/>
 </p>
 
