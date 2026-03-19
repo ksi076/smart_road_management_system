@@ -131,8 +131,8 @@
 
 </td>
 <td>
-
-<img src="img/신호등트러블슈팅해결.png" width="200"/>
+<img src="img/신호등트러블슈팅.png" width="300"/>
+<img src="img/신호등트러블슈팅해결.png" width="300"/>
 
 </td>
 </tr>
