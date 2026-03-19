@@ -1,1 +1,208 @@
+#include <Adafruit_NeoPixel.h>
+#include <string.h>
 
+#define NEOPIXEL_PIN   10
+#define NEOPIXEL_COUNT 16
+
+// 차량용 신호등
+#define LED_GREEN   11
+#define LED_YELLOW  12
+#define LED_RED     13
+
+// 가로등(항상 ON)
+#define ALWAYS_ON_BLUE   5
+#define ALWAYS_ON_GREEN  6
+#define ALWAYS_ON_RED    7
+
+// 보행자용 신호등
+#define PED_RED    2
+#define PED_GREEN  3
+
+Adafruit_NeoPixel strip(NEOPIXEL_COUNT, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+enum TrafficState {
+    STATE_RED,
+    STATE_YELLOW,
+    STATE_GREEN
+};
+
+TrafficState trafficState = STATE_RED;
+unsigned long lastTrafficChange = 0;
+
+const unsigned long RED_TIME = 10000;
+const unsigned long YELLOW_TIME = 1000;
+const unsigned long GREEN_TIME = 10000;
+
+bool trafficOverrideAllOn = false;
+
+char cmdBuffer[32];
+int cmdIndex = 0;
+
+void setAllColor(uint8_t r, uint8_t g, uint8_t b) {
+    for (int i = 0; i < NEOPIXEL_COUNT; i++) {
+        strip.setPixelColor(i, strip.Color(r, g, b));
+    }
+    strip.show();
+}
+
+void applyPedestrianSignal(TrafficState state) {
+    digitalWrite(PED_RED, LOW);
+    digitalWrite(PED_GREEN, LOW);
+
+    if (state == STATE_RED) {
+        digitalWrite(PED_GREEN, HIGH);
+    }
+    else {
+        digitalWrite(PED_RED, HIGH);
+    }
+}
+
+void applyTrafficState(TrafficState state) {
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_YELLOW, LOW);
+    digitalWrite(LED_GREEN, LOW);
+
+    if (state == STATE_RED) {
+        digitalWrite(LED_RED, HIGH);
+    }
+    else if (state == STATE_YELLOW) {
+        digitalWrite(LED_YELLOW, HIGH);
+    }
+    else if (state == STATE_GREEN) {
+        digitalWrite(LED_GREEN, HIGH);
+    }
+
+    applyPedestrianSignal(state);
+}
+
+void setTrafficAllOn() {
+    digitalWrite(LED_RED, HIGH);
+    digitalWrite(LED_YELLOW, HIGH);
+    digitalWrite(LED_GREEN, HIGH);
+
+    digitalWrite(PED_RED, LOW);
+    digitalWrite(PED_GREEN, LOW);
+}
+
+void updateTrafficLight() {
+    if (trafficOverrideAllOn) {
+        setTrafficAllOn();
+        return;
+    }
+
+    unsigned long now = millis();
+
+    if (trafficState == STATE_RED) {
+        if (now - lastTrafficChange >= RED_TIME) {
+            trafficState = STATE_YELLOW;
+            lastTrafficChange = now;
+            applyTrafficState(trafficState);
+        }
+    }
+    else if (trafficState == STATE_YELLOW) {
+        if (now - lastTrafficChange >= YELLOW_TIME) {
+            trafficState = STATE_GREEN;
+            lastTrafficChange = now;
+            applyTrafficState(trafficState);
+        }
+    }
+    else if (trafficState == STATE_GREEN) {
+        if (now - lastTrafficChange >= GREEN_TIME) {
+            trafficState = STATE_RED;
+            lastTrafficChange = now;
+            applyTrafficState(trafficState);
+        }
+    }
+}
+
+void processCommand(const char* cmd) {
+    Serial.print("RECV=[");
+    Serial.print(cmd);
+    Serial.println("]");
+
+    if (strcmp(cmd, "NP_R") == 0) {
+        setAllColor(255, 0, 0);
+        Serial.println("ACK_NP_R");
+    }
+    else if (strcmp(cmd, "NP_B") == 0) {
+        setAllColor(0, 0, 255);
+        Serial.println("ACK_NP_B");
+    }
+    else if (strcmp(cmd, "NP_N") == 0) {
+        setAllColor(0, 0, 0);
+        Serial.println("ACK_NP_N");
+    }
+    else if (strcmp(cmd, "TL_ALL") == 0) {
+        trafficOverrideAllOn = true;
+        setTrafficAllOn();
+        Serial.println("ACK_TL_ALL");
+    }
+    else if (strcmp(cmd, "TL_NORMAL") == 0) {
+        trafficOverrideAllOn = false;
+        applyTrafficState(trafficState);
+        Serial.println("ACK_TL_NORMAL");
+    }
+    else {
+        Serial.println("UNKNOWN_CMD");
+    }
+}
+
+void handleSerialCommand() {
+    while (Serial.available() > 0) {
+        char c = Serial.read();
+
+        if (c == '\r') continue;
+
+        if (c == '\n') {
+            if (cmdIndex > 0) {
+                cmdBuffer[cmdIndex] = '\0';
+                processCommand(cmdBuffer);
+                cmdIndex = 0;
+            }
+        }
+        else {
+            if (cmdIndex < (int)(sizeof(cmdBuffer) - 1)) {
+                cmdBuffer[cmdIndex++] = c;
+            }
+        }
+    }
+}
+
+void setup() {
+    Serial.begin(9600);
+
+    pinMode(LED_GREEN, OUTPUT);
+    pinMode(LED_YELLOW, OUTPUT);
+    pinMode(LED_RED, OUTPUT);
+
+    pinMode(ALWAYS_ON_BLUE, OUTPUT);
+    pinMode(ALWAYS_ON_GREEN, OUTPUT);
+    pinMode(ALWAYS_ON_RED, OUTPUT);
+
+    pinMode(PED_RED, OUTPUT);
+    pinMode(PED_GREEN, OUTPUT);
+
+    digitalWrite(ALWAYS_ON_BLUE, HIGH);
+    digitalWrite(ALWAYS_ON_GREEN, HIGH);
+    digitalWrite(ALWAYS_ON_RED, HIGH);
+
+    strip.begin();
+    strip.show();
+
+    // 시작하자마자 파란색
+    setAllColor(0, 0, 255);
+
+    trafficState = STATE_RED;
+    lastTrafficChange = millis();
+    applyTrafficState(trafficState);
+
+    Serial.println("ARDUINO_READY");
+}
+
+void loop() {
+    handleSerialCommand();
+    updateTrafficLight();
+
+    // 네오픽셀을 계속 파란색으로 유지
+    setAllColor(0, 0, 255);
+}
