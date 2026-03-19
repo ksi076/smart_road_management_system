@@ -118,25 +118,17 @@
 
 ---
 
-## ⚠️ 문제 해결 과정 (trouble shooting)
+## ⚠️ 문제 해결 과정 (Trouble Shooting)
 
-### 신호등을 사람으로 잘못 인식하는 문제
+### 🚦 신호등을 사람으로 잘못 인식하는 문제
 
-<table>
-<tr>
-<td>
+<p>
+<img src="img/신호등트러블1.png" width="300"/>
+<img src="img/신호등트러블슈팅해결.png" width="300"/>
+</p>
 
 - **문제:** 빨간 사람 학습 후 신호등의 빨간 신호를 실제 사람으로 잘못 탐지  
-- **해결:** 특정 ROI 영역안의 person 감지를 continue하여 오탐 방지  
-
-</td>
-<td>
-<img src="img/신호등트러블슈팅.png" width="300"/>
-<img src="img/신호등트러블슈팅해결.png" width="300"/>
-
-</td>
-</tr>
-</table>
+- **해결:** 특정 ROI 영역 안의 person 감지를 continue하여 오탐 방지  
 
 ### car클래스를 밤에 인식하지 못하는 문제
 
