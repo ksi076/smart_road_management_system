@@ -38,6 +38,7 @@
 | YOLOv8 | 객체 탐지 모델 기반 보행자/차량 인식 |
 | OpenCV | 영상 프레임 처리, 시각화, 이미지 저장 |
 | Raspberry Pi5 | 임베디드 환경에서 실시간 시스템 구동 |
+| XPT2046 Touch Controller | 임베디드 환경에서 실시간 시스템 구동 |
 | SQLite | 이벤트 로그 및 일별 통계 저장 |
 | Serial Communication | 외부 장치와의 상태 제어 및 연동 |
 | Arduino IDE| 외부 장치와의 상태 제어 및 연동 |
