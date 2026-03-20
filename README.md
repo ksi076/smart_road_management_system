@@ -122,8 +122,8 @@
 ## 디스플레이 밎 야간 LED 사진
 <div>
   <img src="img/라즈베리파일 디스플레이.jpg" height="400">
-  <img src="img/무단횡단야간.png" height="300">
-  <img src="img/차량침범야간.png" height="300">
+  <img src="img/무단횡단야간.png" height="400">
+  <img src="img/차량침범야간.png" height="400">
 </div>
 
 
