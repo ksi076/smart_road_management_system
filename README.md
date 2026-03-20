@@ -78,7 +78,7 @@
  ![학습](img/learning/학습완료.png)
 
  ### 2. 모형 데이터 라벨링
- ![학습](img/애니라벨링학습.png)
+ <img src="img/애니라벨링학습.png" style="width:250px; height:400px">
 
 
 
