@@ -139,8 +139,8 @@
 ---
 
 ## 데이터베이스 사진
-<img src="img/db/테이블확인.png" height="300">
-<img src="img/db/테이블목록.png" height="300">
+<img src="img/db/테이블확인.png" height="200">
+<img src="img/db/테이블목록.png" height="200">
 
 
 ---
