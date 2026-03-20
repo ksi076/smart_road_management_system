@@ -139,7 +139,10 @@
 ---
 
 ## 데이터베이스 사진
-
+<p>
+<img src="img/db/테이블확인.png" width="300"/>
+<img src="img/db/테이블목록.png" width="300"/>
+</p>
 
 
 ---
