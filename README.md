@@ -139,10 +139,8 @@
 ---
 
 ## 데이터베이스 사진
-<div>
-  <img src="img/db/테이블확인.png" style="width:400px; height:400px; object-fit:cover;">
-  <img src="img/db/테이블목록.png" style="width:400px; height:400px; object-fit:cover;">
-</div>
+<img src="img/db/테이블확인.png" height="300">
+<img src="img/db/테이블목록.png" height="300">
 
 
 ---
