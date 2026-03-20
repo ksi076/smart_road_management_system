@@ -78,8 +78,9 @@
 ### 1. 실제 사람, 차량 학습사진
  <img src="img/learning/학습완료.png" style="width:800px; height:400px">
 
-<div>
+
 ### 2. 모형 데이터 라벨링
+<div>
  <img src="img/애니라벨링학습.png" style="width:400px; height:400px">
  <img src="img/라벨링2.png" style="width:400px; height:400px">
 </div>
