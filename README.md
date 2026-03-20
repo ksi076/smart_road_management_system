@@ -166,11 +166,10 @@
 
 ### car클래스를 밤에 인식하지 못하는 문제
 
-<div align="center">
-  <img src="라즈베리파일 디스플레이.jpg" height="300">
-  <img src="무단횡단야간.png" height="300">
-  <img src="차량침범야간.png" height="300">
-</div>
+<p>
+<img src="img/car트러블슈팅.png" width="300"/>
+<img src="img/car트러블슈팅해결.png" width="300"/>
+</p>
 
 - **문제:** 낮과 밤을 묶어 car 클래스를 학습시킨 결과 밤에 car를 인식하지 못함  
 - **해결:** 낮과 밤을 클래스로 나눠 학습하여 해결 → vehicle, carnigh 클래스로 분류  
