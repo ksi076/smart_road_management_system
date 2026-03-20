@@ -1,0 +1,13 @@
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names: ['car', 'person']
+
+roboflow:
+  workspace: mbjc-hk9gi
+  project: person-car-seaqx
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/mbjc-hk9gi/person-car-seaqx/dataset/1
