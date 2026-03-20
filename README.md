@@ -15,6 +15,7 @@
   - Raspberry Pi5
   - SQLite
   - Arduino IDE
+  - XPT2046 Touch Controller
 - **주요 기능:**
   ![구성도](img/구성도1.png)
   - 무단횡단 감지
@@ -126,10 +127,14 @@
   <img src="img/차량침범야간.png" style="width:250px; height:400px; object-fit:cover;">
 </div>
 
+### 1. 디스플레이 (XPT2046 Touch Controller)
+- 라즈베리파이5와 연결하여 UI화면 제어
 
+### 2. 야간 무단횡단 감지
+- 보행자 빨간불 또는 신호상관 없이 횡단보도 외 도로 침범 시 빨간 LED선 점등
 
-
-
+### 3. 야간 차량침범 감지
+- 보행자 초록불 신호에 차량이 횡단보도 침범 시 파란 LED선 점등
 
 ---
 
