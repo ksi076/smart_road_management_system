@@ -75,7 +75,7 @@
 ## ⚙️ 전처리, 학습 사진
 
 
-### 1. 실제 사람, 차량 학습사진
+### 1. 실제 사람, 차량 학습 후 테스트
  <img src="img/learning/학습완료.png" style="width:800px; height:400px">
 
 
