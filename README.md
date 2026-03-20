@@ -123,8 +123,8 @@
 ## 디스플레이 밎 야간 LED 사진
 <div>
   <img src="img/라즈베리파일 디스플레이.jpg" height="400">
-  <img src="img/무단횡단야간.png" style="width:250px; height:400px; object-fit:cover;">
-  <img src="img/차량침범야간.png" style="width:250px; height:400px; object-fit:cover;">
+  <img src="img/무단횡단야간.png" style="width:250px; height:400px">
+  <img src="img/차량침범야간.png" style="width:250px; height:400px">
 </div>
 
 ### 1. 디스플레이 (XPT2046 Touch Controller)
