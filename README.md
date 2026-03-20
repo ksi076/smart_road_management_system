@@ -75,7 +75,7 @@
 ## ⚙️ 전처리, 학습 사진
 
 ### 1. 실제 사람, 차량 학습사진
- ![학습](img/learning/학습완료.png)
+ <img src="img/learning/학습완료.png" style="width:800px; height:400px">
 
  ### 2. 모형 데이터 라벨링
  <img src="img/애니라벨링학습.png" style="width:800px; height:400px">
