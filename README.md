@@ -46,6 +46,7 @@
 | SQLite | 이벤트 로그 및 일별 통계 저장 |
 | Serial Communication | 외부 장치와의 상태 제어 및 연동 |
 | Arduino IDE| LED 및 네오픽셀 제어 |
+| PILOMAX USB 웹캠| 사각지대 무단횡단 캡처 (인텔카메라와 같이 카메라 2대 동시제어) |
 
 ---
 
