@@ -86,7 +86,7 @@
  <img src="img/learning/학습완료.png" style="width:800px; height:400px">
 
 
-### 2. 모형 데이터 라벨링
+### 2. 모형 데이터 라벨링 및 학습완료
 <div>
  <img src="img/애니라벨링학습.png" style="width:330px; height:400px">
  <img src="img/라벨링2.png" style="width:330px; height:400px">
