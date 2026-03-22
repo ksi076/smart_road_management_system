@@ -88,9 +88,9 @@
 
 ### 2. 모형 데이터 라벨링
 <div>
- <img src="img/애니라벨링학습.png" style="width:250px; height:400px">
- <img src="img/라벨링2.png" style="width:250px; height:400px">
- <img src="img/learning/학습완료테스트.jpg" style="width:250px; height:400px">
+ <img src="img/애니라벨링학습.png" style="width:300px; height:400px">
+ <img src="img/라벨링2.png" style="width:300px; height:400px">
+ <img src="img/learning/학습완료테스트.jpg" style="width:300px; height:400px">
 </div>
 
 
