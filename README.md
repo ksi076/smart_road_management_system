@@ -39,7 +39,7 @@
 |------|------|
 | Python | 전체 시스템 로직 및 영상 처리 구현 |
 | YOLOv8 | 객체 탐지 모델 기반 보행자/차량 인식 |
-| OpenCV | 영상 프레임 처리, 시각화, 이미지 저장 |
+| OpenCV | ROI 표시, 대시보드 구성, 이미지 저장, 색 기반 신호 판별 |
 | Raspberry Pi5 | 임베디드 환경에서 실시간 시스템 구동 |
 | INTEL RealSense Depth Camera D435i | 사람 객체와 횡단보도 중앙까지의 실제 거리 측정 및 이벤트 판별 |
 | XPT2046 Touch Controller | 라즈베리파이 환경에서 디스플레이 사용 |
