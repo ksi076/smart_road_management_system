@@ -1,43 +1,52 @@
-#include <Adafruit_NeoPixel.h>
-#include <string.h>
+#include <Adafruit_NeoPixel.h>   //네오픽셀 LED 제어하기 위한 라이브러리, RGB값이용
+#include <string.h>             // 시리얼로 들어온 명령어가 NP_R인지 TL_ALL인지 판별할때 사용
 
-#define NEOPIXEL_PIN   10
-#define NEOPIXEL_COUNT 16
+#define NEOPIXEL_PIN   10     //네오픽셀 데이터 입력
+#define NEOPIXEL_COUNT 16     //네오픽셀 LED개수 16개
 
 // 차량용 신호등
-#define LED_GREEN   11
-#define LED_YELLOW  12
-#define LED_RED     13
+#define LED_GREEN   11      //차량 초록불
+#define LED_YELLOW  12    // 차량 노랑불
+#define LED_RED     13    // 차량 빨간불
 
 // 가로등(항상 ON)
 #define ALWAYS_ON_BLUE   5
 #define ALWAYS_ON_GREEN  6
 #define ALWAYS_ON_RED    7
 
-// 보행자용 신호등
+// 보행자용 신호등          //차량 신호에 따라 두핀이 자동으로 제어
 #define PED_RED    2
 #define PED_GREEN  3
 
 Adafruit_NeoPixel strip(NEOPIXEL_COUNT, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+// LED개수 16개, 제어핀 10개, 통신속도 방식 800kHZ
+
 
 enum TrafficState {
     STATE_RED,
     STATE_YELLOW,
     STATE_GREEN
 };
+// 차량 신호등의 현재 상태를 코드에서 쉽게 관리하기 위한 자료형
 
-TrafficState trafficState = STATE_RED;
-unsigned long lastTrafficChange = 0;
+TrafficState trafficState = STATE_RED; // 처음 시작할 때는 차량신호 빨간 불로 시작
+unsigned long lastTrafficChange = 0;   // 마지막으로 신호가 바뀐 시간저장 (millis()값과 비교해서 일정시간 후 상태 변경할때 사용)
 
-const unsigned long RED_TIME = 10000;
-const unsigned long YELLOW_TIME = 1000;
-const unsigned long GREEN_TIME = 10000;
 
-bool trafficOverrideAllOn = false;
+// 각 상태가 유지되는 시간(ms단위)
+const unsigned long RED_TIME = 10000;      //빨강 10초  
+const unsigned long YELLOW_TIME = 1000;    //노랑 1초
+const unsigned long GREEN_TIME = 10000;    //초록 10초
 
-char cmdBuffer[32];
-int cmdIndex = 0;
+bool trafficOverrideAllOn = false;    //false : 정상 자동신호 순환 true : 차량신호등 3개 모두켜는 특수모드
 
+char cmdBuffer[32];   //시리얼로 들어온 문자들을 저장하는 배열
+int cmdIndex = 0;     //현재 몆 글자까지 저장했는지 위치 표시
+
+
+
+// 네오픽셀 16개 전체를 같은 색으로 바꾸는 함수(255,0,0) -> 전체빨강, (0,0,0) ->전체꺼짐 등
 void setAllColor(uint8_t r, uint8_t g, uint8_t b) {
     for (int i = 0; i < NEOPIXEL_COUNT; i++) {
         strip.setPixelColor(i, strip.Color(r, g, b));
@@ -45,10 +54,13 @@ void setAllColor(uint8_t r, uint8_t g, uint8_t b) {
     strip.show();
 }
 
+// 차량신호 상태에 따라 보행자 신호를 설정하는 함수
 void applyPedestrianSignal(TrafficState state) {
-    digitalWrite(PED_RED, LOW);
+  // 일단 모두 OFF
+    digitalWrite(PED_RED, LOW);  
     digitalWrite(PED_GREEN, LOW);
 
+  //차량 신호에 따라 필요한 LED 점등
     if (state == STATE_RED) {
         digitalWrite(PED_GREEN, HIGH);
     }
@@ -57,11 +69,16 @@ void applyPedestrianSignal(TrafficState state) {
     }
 }
 
+
+// 차량 신호등 상태를 실제 LED 출력으로 반영하는 함수
 void applyTrafficState(TrafficState state) {
+    
+    //일단 모두 OFF
     digitalWrite(LED_RED, LOW);
     digitalWrite(LED_YELLOW, LOW);
     digitalWrite(LED_GREEN, LOW);
 
+    // 위에 함수를 통해 출력 반영
     if (state == STATE_RED) {
         digitalWrite(LED_RED, HIGH);
     }
@@ -72,9 +89,13 @@ void applyTrafficState(TrafficState state) {
         digitalWrite(LED_GREEN, HIGH);
     }
 
+
+    // 보행자 신호 함수 호출로 차량신호와 보행자 신호가 항상 연동됨
     applyPedestrianSignal(state);
 }
 
+
+//비상상황에 차량신호 모두 ON 후 보행자 신호 모두 OFF
 void setTrafficAllOn() {
     digitalWrite(LED_RED, HIGH);
     digitalWrite(LED_YELLOW, HIGH);
@@ -84,14 +105,19 @@ void setTrafficAllOn() {
     digitalWrite(PED_GREEN, LOW);
 }
 
+
+//강제 전체 점등모드가 켜져있으면 자동신호 정지함수
 void updateTrafficLight() {
     if (trafficOverrideAllOn) {
         setTrafficAllOn();
         return;
     }
 
+    // 아두이노가 켜진 후 지난 시간을 반환해주는 millis()사용
     unsigned long now = millis();
 
+
+    //현재 빨강불 이라면 마지막 변경시간으로 부터 10초가 지났는지 확인(10초지나면 노랑불)
     if (trafficState == STATE_RED) {
         if (now - lastTrafficChange >= RED_TIME) {
             trafficState = STATE_YELLOW;
@@ -99,6 +125,8 @@ void updateTrafficLight() {
             applyTrafficState(trafficState);
         }
     }
+
+    //현재 노랑불 이라면 마지막 변경시간으로부터 1초 지났는지 확인(1초지나면 초록불)
     else if (trafficState == STATE_YELLOW) {
         if (now - lastTrafficChange >= YELLOW_TIME) {
             trafficState = STATE_GREEN;
@@ -106,6 +134,8 @@ void updateTrafficLight() {
             applyTrafficState(trafficState);
         }
     }
+
+    //현재 초록불 이라면 마지막변경시간으로부터 10초 지났는지 확인(10초 지나면 빨간불)
     else if (trafficState == STATE_GREEN) {
         if (now - lastTrafficChange >= GREEN_TIME) {
             trafficState = STATE_RED;
@@ -115,44 +145,64 @@ void updateTrafficLight() {
     }
 }
 
+
+
+//완성된 명령 문자열을 받아 실제 동작을 수행하는 함수 (라파에서 감지하여 NP_N, NP_R, NP_B 신호 보내줌)
 void processCommand(const char* cmd) {
     Serial.print("RECV=[");
     Serial.print(cmd);
     Serial.println("]");
 
+
+   // 네오픽셀 전체를 빨간색으로 설정
     if (strcmp(cmd, "NP_R") == 0) {
         setAllColor(255, 0, 0);
-        Serial.println("ACK_NP_R");
+        Serial.println("ACK_NP_R"); //응답신호
     }
+
+    // 네오픽셀 전체를 파란색으로 설정
     else if (strcmp(cmd, "NP_B") == 0) {
         setAllColor(0, 0, 255);
-        Serial.println("ACK_NP_B");
+        Serial.println("ACK_NP_B"); //응답신호
     }
+    
+    // 네오픽셀 전체 끄기
     else if (strcmp(cmd, "NP_N") == 0) {
         setAllColor(0, 0, 0);
-        Serial.println("ACK_NP_N");
+        Serial.println("ACK_NP_N");  //응답신호
     }
+
+    // 전체 점등 강제모드 활성화 (빨/파/초 모두 점등) 및 자동 신호순환 중단
     else if (strcmp(cmd, "TL_ALL") == 0) {
         trafficOverrideAllOn = true;
         setTrafficAllOn();
         Serial.println("ACK_TL_ALL");
     }
+
+    // 전체 점등모드 해제 및 trafficstate 상태로 정상복귀(자동순환 다시 시작)
     else if (strcmp(cmd, "TL_NORMAL") == 0) {
         trafficOverrideAllOn = false;
         applyTrafficState(trafficState);
         Serial.println("ACK_TL_NORMAL");
     }
+
+    // 알수없는 명령 들어올경우 출력
     else {
         Serial.println("UNKNOWN_CMD");
     }
 }
 
+
+// 시리일로 들어오는 데이터를 한 글자씩 읽어서 명령어 한줄 단위로 완성
 void handleSerialCommand() {
     while (Serial.available() > 0) {
         char c = Serial.read();
 
+        // 캐리지 리턴 무시 윈도우 환경에서 (\r\n 으로 줄바꿈이 들어오는경우가 많아서)
+        // \r은 무시하고 \n 기준으로만 처리
         if (c == '\r') continue;
 
+        // 줄바꿈 도착시 명령 처리(지금까지 받은 문자를 하나의 명령으로 완성시킴)
         if (c == '\n') {
             if (cmdIndex > 0) {
                 cmdBuffer[cmdIndex] = '\0';
@@ -160,6 +210,7 @@ void handleSerialCommand() {
                 cmdIndex = 0;
             }
         }
+        // 줄바꿈이 아닌 문자는 버퍼에 저장(배열길이를 넘지않게 제한하여  버퍼오버플로우 방지)
         else {
             if (cmdIndex < (int)(sizeof(cmdBuffer) - 1)) {
                 cmdBuffer[cmdIndex++] = c;
@@ -169,8 +220,9 @@ void handleSerialCommand() {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(9600); //9600번으로 시리얼 통신 시작
 
+    // 모든 LED 관련 핀을 출력모드로 설정
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_YELLOW, OUTPUT);
     pinMode(LED_RED, OUTPUT);
@@ -181,21 +233,25 @@ void setup() {
 
     pinMode(PED_RED, OUTPUT);
     pinMode(PED_GREEN, OUTPUT);
-
+    
+    // 가로등 LED는 시작하자마자 켜지고 유지
     digitalWrite(ALWAYS_ON_BLUE, HIGH);
     digitalWrite(ALWAYS_ON_GREEN, HIGH);
     digitalWrite(ALWAYS_ON_RED, HIGH);
 
+    // 네오픽셀 초기화
     strip.begin();
     strip.show();
 
-    // 시작하자마자 파란색
+    // 네오픽셀 시작하자마자 파란색
     setAllColor(0, 0, 255);
 
+    // 신호등 초기 상태 설정 차랑신호 초기상태 빨간불 설정되면서 보행자는 초록불 켜짐
     trafficState = STATE_RED;
     lastTrafficChange = millis();
     applyTrafficState(trafficState);
 
+    // 아도이노 초기화 완료 메시지전송
     Serial.println("ARDUINO_READY");
 }
 
