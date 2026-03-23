@@ -18,6 +18,7 @@
   - XPT2046 Touch Controller
   - INTEL RealSense Depth Camera D435i
   - PILOMAX USB 웹캠
+  - Arduino MEGA 2560 R3
 - **주요 기능:**
   ![구성도](img/구성도1.png)
   - 무단횡단 감지
@@ -45,7 +46,7 @@
 | XPT2046 Touch Controller | 라즈베리파이 환경에서 디스플레이 사용 |
 | SQLite | 이벤트 로그 및 일별 통계 저장 |
 | Serial Communication | 외부 장치와의 상태 제어 및 연동 |
-| Arduino IDE| LED 및 네오픽셀 제어 |
+| Arduino IDE| LED 및 네오픽셀 제어 (Arduino MEGA 2560 R3 제어)|
 | PILOMAX USB 웹캠| 사각지대 무단횡단 캡처 (인텔카메라와 같이 사용하여 카메라 2대 동시제어) |
 
 ---
