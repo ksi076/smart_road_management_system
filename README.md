@@ -133,7 +133,7 @@
 
 <div>
  <img src="./gif/display/횡단보도무단횡단.gif" width="610" height="500" align="top">
- <img src="./gif/reality/횡단보도_무단횡단.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/횡단보도_무단횡단.gif" width="230" height="340" align="top">
 </div>
 
 
@@ -142,7 +142,7 @@
 
 <div>
  <img src="./gif/display/차도무단횡단.gif" width="610" height="500" align="top">
- <img src="./gif/reality/차도무단횡단.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/차도무단횡단.gif" width="230" height="340" align="top">
 </div>
 
 
@@ -150,14 +150,14 @@
 
 <div>
  <img src="./gif/display/불법주정차2.gif" width="610" height="500" align="top">
- <img src="./gif/reality/불법주정차.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/불법주정차.gif" width="230" height="340" align="top">
 </div>
 
 ### [불법 유턴 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1-yff9gF1twIYAe5XEUdBGuQiPEu5qhGJ/view?usp=sharing)
 
 <div>
  <img src="./gif/display/불법유턴1.gif" width="610" height="500" align="top">
- <img src="./gif/reality/불법유턴압축.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/불법유턴압축.gif" width="230" height="340" align="top">
 </div>
 
 ### [차량 횡단보도 침범 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1e-4tieU3bb9hKjmdHmfrGHj2JFM-pdN3/view?usp=sharing)
@@ -167,14 +167,14 @@
 
 <div>
  <img src="./gif/display/긴급상황사고최종.gif" width="610" height="500" align="top">
- <img src="./gif/reality/긴급상황사고압축.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/긴급상황사고압축.gif" width="230" height="340" align="top">
 </div>
 
 ### [긴급 차 비켜주기 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1XEe5XvLOEKhPmtaGWWo1Pxdk5H6INKlp/view?usp=sharing)
 
 <div>
  <img src="./gif/display/긴급차비켜주기.gif" width="610" height="500" align="top">
- <img src="./gif/reality/긴급차비켜주기실물.gif" width="200" height="340" align="top">
+ <img src="./gif/reality/긴급차비켜주기실물.gif" width="230" height="340" align="top">
 </div>
 
 ---
