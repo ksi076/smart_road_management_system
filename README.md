@@ -132,7 +132,7 @@
 ### [인도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1JJZ4wy2REE9QvrCth4uMI0Oh-UzQre7v/view?usp=sharing)
 <p>
   <img src="gif/display/횡단보도무단횡단.gif" width="45%">
-  <img src="gif/reality/횡단보도 무단횡단.gif" width="45%">
+  <img src="gif/reality/횡단보도무단횡단.gif" width="45%">
 </p>
 
 ### [차도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/10VPleeBBzlbaidgrZ4XxjRO3DYnDbJa4/view?usp=sharing)
