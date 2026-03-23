@@ -160,10 +160,18 @@
 ![차량침범](gif/display/차량횡단보도침범.gif)
 
 ### [긴급상황 사고 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/11_sgPJO63pYdR7drzoCO-xOwAlElfMGV/view?usp=sharing)
-![긴급상황사고](gif/display/긴급상황사고최종.gif)
+
+<div>
+ <img src="./gif/display/긴급상황사고최종.gif" width="600" height="430" align="top">
+ <img src="./gif/reality/긴급상황사고압축.gif" width="300" height="340" align="top">
+</div>
 
 ### [긴급 차 비켜주기 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1XEe5XvLOEKhPmtaGWWo1Pxdk5H6INKlp/view?usp=sharing)
-![긴급차비킴](gif/display/긴급차비켜주기.gif)
+
+<div>
+ <img src="./gif/display/긴급차비켜주기.gif" width="600" height="430" align="top">
+ <img src="./gif/reality/긴급차비켜주기실물.gif" width="300" height="340" align="top">
+</div>
 
 ---
 
