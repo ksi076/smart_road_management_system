@@ -132,8 +132,8 @@
 ### [인도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1JJZ4wy2REE9QvrCth4uMI0Oh-UzQre7v/view?usp=sharing)
 
 <div align="center">
-  <img src="./gif/display/횡단보도무단횡단.gif" width="600" height="400" align="top">
-  <img src="./gif/reality/횡단보도_무단횡단.gif" width="300" height="340" align="top">
+<img src="./gif/display/횡단보도무단횡단.gif" width="600" height="400" align="top">
+<img src="./gif/reality/횡단보도_무단횡단.gif" width="300" height="340" align="top">
 </div>
 
 
