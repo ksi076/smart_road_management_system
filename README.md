@@ -161,7 +161,11 @@
 </div>
 
 ### [차량 횡단보도 침범 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1e-4tieU3bb9hKjmdHmfrGHj2JFM-pdN3/view?usp=sharing)
-![차량침범](gif/display/차량횡단보도침범.gif)
+
+<div>
+ <img src="./gif/display/차량횡단보도침범.gif" width="580" height="500" align="top">
+ <img src="./gif/reality/차량횡단보도침범압축.gif" width="250" height="340" align="top">
+</div>
 
 ### [긴급상황 사고 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/11_sgPJO63pYdR7drzoCO-xOwAlElfMGV/view?usp=sharing)
 
