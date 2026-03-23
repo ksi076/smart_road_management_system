@@ -86,12 +86,15 @@
 ### 1. 실제 사람, 차량 학습 후 테스트
  <img src="img/learning/학습완료.png" style="width:800px; height:400px">
 
+### Roboflow 사이트에서 공공데이터 다운받아 학습진행
 
 ### 2. 모형 데이터 라벨링 및 학습완료
 <div>
  <img src="img/라벨링2.png" style="width:420px; height:400px">
  <img src="img/learning/학습완료테스트.jpg" style="width:400px; height:400px">
 </div>
+
+### 사진을 직접 촬영 하여 AnyLabeling-Windows-CPU-x64 툴을 사용하여 직접 데이터 라벨링 하여 학습진행
 
 
 
