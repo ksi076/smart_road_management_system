@@ -15,10 +15,11 @@
   - Raspberry Pi5
   - SQLite
   - Arduino IDE
+  - Arduino MEGA 2560 R3
   - XPT2046 Touch Controller
   - INTEL RealSense Depth Camera D435i
   - PILOMAX USB 웹캠
-  - Arduino MEGA 2560 R3
+
 - **주요 기능:**
   ![구성도](img/구성도1.png)
   - 무단횡단 감지
