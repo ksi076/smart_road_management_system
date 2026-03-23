@@ -154,7 +154,7 @@
 </div>
 
 ### [불법 유턴 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1-yff9gF1twIYAe5XEUdBGuQiPEu5qhGJ/view?usp=sharing)
-![불법유턴](gif/display/불법유턴1.gif)
+
 <div>
  <img src="./gif/display/불법유턴1.gif" width="550" height="430" align="top">
  <img src="./gif/reality/불법유턴압축.gif" width="260" height="340" align="top">
