@@ -1,75 +1,81 @@
-from ultralytics import YOLO
-import cv2
-import os
-import time
-from datetime import datetime
-import numpy as np
-from PIL import ImageFont, ImageDraw, Image
-import serial
-import pyrealsense2 as rs
-import sqlite3
+from ultralytics import YOLO  # YOLO모델을 불러오기 위한 라이브러리
+import cv2                    # 카메라프레임읽기, 박스그리기,마스크연산,대시보드출력
+import os                     # 파일/폴더 경로처리
+import time                   # 시간로직
+from datetime import datetime  # DB감지시간, 화면에 현재시간
+import numpy as np             #  마스크처리, 좌표계산
+from PIL import ImageFont, ImageDraw, Image  # 한글텍스트출력용
+import serial                   # 라즈베리가 아두이노에게 문자열(명령) 전송
+import pyrealsense2 as rs     # D435라이브러리
+import sqlite3                # 사건발생기록을 DB에 저장할때 필요
 
 # =========================
 # DB / 저장 폴더 설정
 # =========================
-DB_PATH = "/home/rapi20/workspace/jaywalk_monitor.db"
+DB_PATH = "/home/rapi20/workspace/jaywalk_monitor.db"   # SQLite DB 파일 경로
 
-BASE_SAVE_DIR = "/home/rapi20/workspace/captures"
-JAYWALK_DIR = os.path.join(BASE_SAVE_DIR, "jaywalk")
-ILLEGAL_PARK_DIR = os.path.join(BASE_SAVE_DIR, "illegal_park")
-ILLEGAL_UTURN_DIR = os.path.join(BASE_SAVE_DIR, "illegal_uturn")
+BASE_SAVE_DIR = "/home/rapi20/workspace/captures"                   # 모든 캡처 이미지가 저장되는 상위 폴더 
+JAYWALK_DIR = os.path.join(BASE_SAVE_DIR, "jaywalk")                # 무단횡단 이미지 저장 폴더
+ILLEGAL_PARK_DIR = os.path.join(BASE_SAVE_DIR, "illegal_park")      # 불법주차 이미지 저장 폴더
+ILLEGAL_UTURN_DIR = os.path.join(BASE_SAVE_DIR, "illegal_uturn")    # 불법유턴 이미지 저장 폴더
 
-os.makedirs(BASE_SAVE_DIR, exist_ok=True)
-os.makedirs(JAYWALK_DIR, exist_ok=True)
+# 폴더가 없으면 생성, 있으면 무시
+os.makedirs(BASE_SAVE_DIR, exist_ok=True)                      
+os.makedirs(JAYWALK_DIR, exist_ok=True)                     
 os.makedirs(ILLEGAL_PARK_DIR, exist_ok=True)
-os.makedirs(ILLEGAL_UTURN_DIR, exist_ok=True)
+os.makedirs(ILLEGAL_UTURN_DIR, exist_ok=True)               
 
 # =========================
 # 설정
 # =========================
-MODEL_PATH = "/home/rapi20/workspace/8stest/best.onnx"
-FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+MODEL_PATH = "/home/rapi20/workspace/8stest/best.onnx"              # 학습 완료된 YOLO ONNX 모델
+FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"       # 한글 폰트 경로
 
-SERIAL_PORT = "/dev/ttyACM0"
-BAUDRATE = 9600
+SERIAL_PORT = "/dev/ttyACM0"            # 아두이노가 연결된 포트
+BAUDRATE = 9600                         # 시리얼 통신 속도
 
 # D435
-CAM_WIDTH = 640
-CAM_HEIGHT = 480
+CAM_WIDTH = 640      # D435  프레임 너비
+CAM_HEIGHT = 480     # D435  프레임 높이
 
 # 추가 USB 웹캠
-AUX_CAM_INDEX = 0
-AUX_CAM_WIDTH = 640
-AUX_CAM_HEIGHT = 480
+AUX_CAM_INDEX = 0       # 보조 웹캠 인덱스번호
+AUX_CAM_WIDTH = 640     # 보조 웹캠 너비
+AUX_CAM_HEIGHT = 480    # 보조 웹캠 높이
 
-DASHBOARD_WIDTH = 1280
-DASHBOARD_HEIGHT = 720
+DASHBOARD_WIDTH = 1280  # 대시보드(디스플레이) 너비
+DASHBOARD_HEIGHT = 720  # 대시보드(디스플레이) 높이
 
-YOLO_IMGSZ = 320
-YOLO_CONF = 0.5
-EMERGENCY_BLINK_INTERVAL = 0.5
+YOLO_IMGSZ = 320                # YOLO 추론용 입력 크기
+YOLO_CONF = 0.5                 # confidence 50% 이상만 믿겠다
+EMERGENCY_BLINK_INTERVAL = 0.5  # 비상화면 대시보드 깜빡이는 속도 0.5초 간격
 
 # =========================
 # 시간 설정
 # =========================
-JAYWALK_COUNT_COOLDOWN = 10
-PARKING_CAPTURE_COOLDOWN = 10
-UTURN_CAPTURE_COOLDOWN = 10
-CAPTURE_DISPLAY_DURATION = 5
-AMBULANCE_EMERGENCY_DURATION = 15
-WARNING_HOLD_SECONDS = 3.0
+JAYWALK_COUNT_COOLDOWN = 10         # 무단횡단 중복 카운트 방지 시간(10초)
+PARKING_CAPTURE_COOLDOWN = 10       # 불법주차 중복 캡처 방지 시간(10초)
+UTURN_CAPTURE_COOLDOWN = 10         # 불법유턴 중복 캡처 방지 시간(10초)
+CAPTURE_DISPLAY_DURATION = 5        # 캡처화면 전체 표시 시간(5초)
+AMBULANCE_EMERGENCY_DURATION = 15   # 경광등 ON 강지 후 비상 상태 유지시간(15초)
+WARNING_HOLD_SECONDS = 3.0          # 경광등 ON 상태 유지 판정시간(3초)
+
+# 네오픽셀 유지 시간
+LED_HOLD_SECONDS = 1.5
 
 # 불법주차 기준
-ILLEGAL_PARK_SEC = 3.0
+ILLEGAL_PARK_SEC = 3.0         # 차량이 불법구역내에 3초 이상 머물면 불법주차로 판단
 
 # 판정 비율 기준
-ROAD_RATIO_THRESHOLD = 0.30
-ILLEGAL_ZONE_RATIO_THRESHOLD = 0.55
-FALL_VALID_RATIO_THRESHOLD = 1 / 3   # fall이 유효 ROI에 이 비율 이상 겹쳐야 인정
+ROAD_RATIO_THRESHOLD = 0.30                 # 사람이 도로 ROI에 30%이상 겹치면 무단횡단 
+ILLEGAL_ZONE_RATIO_THRESHOLD = 0.55         # 차량이 불법구역과 55% 이상 겹치면 불법주차 후보
+FALL_VALID_RATIO_THRESHOLD = 1 / 3          # fall이 유효 ROI에 이 비율 이상 겹쳐야 인정 (엉뚱한위치에서 검출된 오탐을 줄이기위한 기준)
 
 # =========================
 # D435 고정 ROI
 # =========================
+
+# 화면 왼쪽 차로에 해당하는 영역
 LEFT_ROAD_ROIS = [
     (229, 136, 348, 286),
     (206, 170, 231, 290),
@@ -78,6 +84,7 @@ LEFT_ROAD_ROIS = [
     (1, 429, 635, 477),
 ]
 
+# 오른쪽 차로 영역
 RIGHT_ROAD_ROIS = [
     (355, 132, 500, 280),
     (499, 154, 514, 280),
@@ -85,64 +92,77 @@ RIGHT_ROAD_ROIS = [
     (532, 211, 551, 277),
 ]
 
+#전체 도로 영역
 ROAD_ROIS = LEFT_ROAD_ROIS + RIGHT_ROAD_ROIS
 
+# 횡단보도 영역
 CROSSWALK_ROIS = [
     (63, 294, 635, 427),
     (17, 353, 61, 426),
 ]
 
+# 신호등 고정위치 좌표
 SIGNAL_ROI = (568, 111, 628, 133)
 
+
 # 클래스 이름
-WARNING_CLASSES = {"ON", "OFF"}
-PERSON_CLASSES = {"person", "personnight"}
-VEHICLE_CLASSES = {"vehicle", "carnight"}
-FALL_CLASSES = {"fall", "fallnight"}
+WARNING_CLASSES = {"ON", "OFF"}                 # 경광등 ON/OFF 관련 클래스
+PERSON_CLASSES = {"person", "personnight"}      # 사람 클래스
+VEHICLE_CLASSES = {"vehicle", "carnight"}       # 차량 클래스
+FALL_CLASSES = {"fall", "fallnight"}            # 낙상 클래스
 
 # 거리 측정 설정
-PATCH_SIZE = 5
-LINE_SAMPLE_COUNT = 80
+PATCH_SIZE = 5              # depth 카메라 거리 계산 시 카메라의 한 점만 믿지 않고 주변 5x5 영역으로 계산
+LINE_SAMPLE_COUNT = 80      # 횡단보도 기준선 위에 80갸위 샘플 점을 뿌려서 사람과의 최소거리 계산
 
 # =========================
 # DB 함수
 # =========================
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
+# DB 준비 작업 함수(프로그램 시작할 때 자동으로 테이블 생성)
+def init_db():
+    conn = sqlite3.connect(DB_PATH)    # DB파일을 연다(없으면 새로 생성)
+    cursor = conn.cursor()             # SQL문을 실제로 실행할 객채 생성(커서)
+
+
+    # 사건 하나하나를 저장할 로그 테이블
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS event_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_type TEXT NOT NULL,
-            detected_at TEXT NOT NULL,
-            image_path TEXT
+            id INTEGER PRIMARY KEY AUTOINCREMENT,       -- 자동 증가 ID
+            event_type TEXT NOT NULL,                   -- 사건 종류
+            detected_at TEXT NOT NULL,                  -- 발생 시각
+            image_path TEXT                             -- 저장 이미지 경로
         )
     """)
 
+    # 날짜 별 집계 통계 테이블
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_stats (
-            stat_date TEXT PRIMARY KEY,
-            jaywalk_count INTEGER NOT NULL DEFAULT 0,
-            last_detect_time TEXT
+            stat_date TEXT PRIMARY KEY,                  -- 날짜
+            jaywalk_count INTEGER NOT NULL DEFAULT 0,    -- 그 날 무단횡단 횟수 
+            last_detect_time TEXT                        -- 마지막 감지 시각
         )
     """)
 
-    conn.commit()
-    conn.close()
+    conn.commit()       # 테이블 생성 반영
+    conn.close()        # 연결 닫기
 
 
+# 사건 발생 로그 저장하는 함수
 def save_event(event_type, image_path=None):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)     
     cursor = conn.cursor()
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  #현재 시각 문자열 생성
 
     cursor.execute("""
-        INSERT INTO event_logs (event_type, detected_at, image_path)
+        INSERT INTO event_logs (event_type, detected_at, image_path)    -- 사건이 발생할 때마다 DB에 한 줄 추가
         VALUES (?, ?, ?)
-    """, (event_type, now_str, image_path))
-
+    """, (event_type, now_str, image_path))     # 사건 정보 저장 ex) event_type : "jaywalk", "illegal_park", "illegal_uturn" 같은 값이 들어감
+                                                #               ex) image_path : 사진경로저장
+                                                #               ex) now_str    : 사람이 보기 좋게 시간을 문자열로 저장
+                                                
+                                                            
     conn.commit()
     conn.close()
 
@@ -151,8 +171,8 @@ def update_jaywalk_daily_stats():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 현재 시각
+    today_str = datetime.now().strftime("%Y-%m-%d")         # 오늘 날짜만 추출
 
     cursor.execute("""
         INSERT INTO daily_stats (stat_date, jaywalk_count, last_detect_time)
@@ -162,6 +182,8 @@ def update_jaywalk_daily_stats():
             jaywalk_count = jaywalk_count + 1,
             last_detect_time = excluded.last_detect_time
     """, (today_str, now_str))
+
+    # 오늘 날짜가 DB에 없으면 새로 만들고 jaywalk_count = 1
 
     conn.commit()
     conn.close()
@@ -478,7 +500,7 @@ def judge_traffic_signal(roi):
 
 
 def send_serial_command(ser, cmd, last_cmd):
-    if ser is None:
+    if ser is None or cmd is None:
         return last_cmd
 
     if cmd != last_cmd:
@@ -493,8 +515,16 @@ def send_serial_command(ser, cmd, last_cmd):
     return last_cmd
 
 
-def send_led_command(ser, cmd, last_cmd):
-    return send_serial_command(ser, cmd, last_cmd)
+def drain_serial_feedback(ser):
+    if ser is None:
+        return
+    try:
+        while ser.in_waiting > 0:
+            line = ser.readline().decode(errors="ignore").strip()
+            if line:
+                print(f"[ARDUINO] {line}")
+    except Exception:
+        pass
 
 
 # =========================
@@ -599,7 +629,6 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
     warning_override_active = (now - hold_state["last_warning_on_time"]) <= WARNING_HOLD_SECONDS
-    hold_state["np_cmd"] = "NP_N"
     hold_state["signal_cmd"] = "TL_ALL" if warning_override_active else "TL_NORMAL"
 
     status_text = "USB EMERGENCY LIGHT ON" if emergency_detected_now else "USB NORMAL"
@@ -751,7 +780,10 @@ def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm
     return screen
 
 
-def make_emergency_fullscreen():
+# =========================
+# 비상화면 + D435 실시간 화면 포함
+# =========================
+def make_emergency_fullscreen(live_frame=None):
     screen = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8)
 
     now = time.time()
@@ -766,6 +798,7 @@ def make_emergency_fullscreen():
         orange_color = (0, 165, 255)
         green_color = (0, 255, 0)
         border_color = (255, 255, 255)
+        live_box_border = (0, 200, 255)
     else:
         screen[:] = (10, 10, 20)
         banner_color = (0, 0, 120)
@@ -775,6 +808,7 @@ def make_emergency_fullscreen():
         orange_color = (0, 90, 140)
         green_color = (0, 100, 0)
         border_color = (140, 140, 140)
+        live_box_border = (0, 120, 180)
 
     cv2.rectangle(screen, (0, 0), (DASHBOARD_WIDTH, 90), banner_color, -1)
     screen = draw_korean_text(screen, "비상사태 경고", (35, 18), font_title, (255, 255, 255))
@@ -802,6 +836,36 @@ def make_emergency_fullscreen():
 
     guide_color = (255, 255, 0) if blink_on else (180, 180, 120)
     screen = put_center_text_pil(screen, "비상상태가 유지되고 있습니다.", 250, 640, 1030, 700, font_small, guide_color)
+
+    # =========================
+    # 우측 상단 D435 실시간 화면 박스
+    # =========================
+    live_box_x1, live_box_y1 = 900, 120
+    live_box_x2, live_box_y2 = 1190, 250
+    live_box_w = live_box_x2 - live_box_x1
+    live_box_h = live_box_y2 - live_box_y1
+
+    cv2.rectangle(screen, (live_box_x1, live_box_y1), (live_box_x2, live_box_y2), (30, 30, 30), -1)
+    cv2.rectangle(screen, (live_box_x1, live_box_y1), (live_box_x2, live_box_y2), live_box_border, 3)
+
+    cv2.rectangle(screen, (live_box_x1, live_box_y1), (live_box_x2, live_box_y1 + 28), (55, 55, 55), -1)
+    screen = draw_korean_text(screen, "D435 실시간", (live_box_x1 + 10, live_box_y1 + 4), font_tiny, (255, 255, 255))
+
+    inner_x1 = live_box_x1 + 6
+    inner_y1 = live_box_y1 + 34
+    inner_x2 = live_box_x2 - 6
+    inner_y2 = live_box_y2 - 6
+    inner_w = inner_x2 - inner_x1
+    inner_h = inner_y2 - inner_y1
+
+    if live_frame is not None and live_frame.size > 0:
+        live_view = resize_with_padding(live_frame, inner_w, inner_h, bg_color=(0, 0, 0))
+        screen[inner_y1:inner_y2, inner_x1:inner_x2] = live_view
+    else:
+        empty_live = np.zeros((inner_h, inner_w, 3), dtype=np.uint8)
+        empty_live[:] = (20, 20, 20)
+        empty_live = put_center_text_pil(empty_live, "영상 없음", 0, 0, inner_w, inner_h, font_tiny, (180, 180, 180))
+        screen[inner_y1:inner_y2, inner_x1:inner_x2] = empty_live
 
     return screen
 
@@ -866,6 +930,11 @@ def main():
     try:
         ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
         time.sleep(2)
+        try:
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+        except Exception:
+            pass
         print(f"시리얼 연결 성공: {SERIAL_PORT}")
     except Exception as e:
         print(f"시리얼 연결 실패: {e}")
@@ -915,7 +984,7 @@ def main():
     last_uturn_capture = load_latest_event_image("illegal_uturn")
 
     last_capture = None
-    capture_mode = None  # "jaywalk", "parking", "uturn"
+    capture_mode = None
 
     show_capture_fullscreen = False
     show_capture_until = 0
@@ -935,8 +1004,11 @@ def main():
     last_scores = []
 
     last_d435_led_cmd = None
-    last_aux_np_cmd = None
     last_aux_signal_cmd = None
+
+    # 네오픽셀 유지용 상태
+    led_hold_until = 0.0
+    led_hold_cmd = "NP_N"
 
     aux_display_frame = None
     aux_red_masks = []
@@ -947,7 +1019,6 @@ def main():
 
     aux_hold_state = {
         "last_warning_on_time": 0.0,
-        "np_cmd": "NP_N",
         "signal_cmd": "TL_NORMAL",
     }
 
@@ -1045,6 +1116,7 @@ def main():
                         if x2 <= x1 or y2 <= y1:
                             continue
 
+                            label_name = names[int(cls_id)]
                         label_name = names[int(cls_id)]
                         last_boxes.append((x1, y1, x2, y2))
                         last_labels.append(label_name)
@@ -1318,34 +1390,51 @@ def main():
             if temp_emergency_for_status:
                 status_text = "EMERGENCY"
                 status_color = (0, 0, 255)
-                d435_led_cmd = "N"
+                requested_led_cmd = "NP_N"
+                led_hold_cmd = "NP_N"
+                led_hold_until = 0.0
             elif jaywalking_detected:
                 status_text = "JAYWALKING"
                 status_color = (0, 0, 255)
-                d435_led_cmd = "R"
+                requested_led_cmd = "NP_R"
+                led_hold_cmd = requested_led_cmd
+                led_hold_until = now + LED_HOLD_SECONDS
             elif vehicle_intrusion_detected:
                 status_text = "VEHICLE INTRUSION"
                 status_color = (255, 0, 0)
-                d435_led_cmd = "B"
+                requested_led_cmd = "NP_B"
+                led_hold_cmd = requested_led_cmd
+                led_hold_until = now + LED_HOLD_SECONDS
             elif illegal_uturn_detected:
                 status_text = "ILLEGAL U-TURN"
                 status_color = (0, 165, 255)
-                d435_led_cmd = "B"
+                requested_led_cmd = "NP_B"
+                led_hold_cmd = requested_led_cmd
+                led_hold_until = now + LED_HOLD_SECONDS
             elif illegal_parking_detected:
                 status_text = "ILLEGAL PARKING"
                 status_color = (180, 0, 255)
-                d435_led_cmd = "B"
+                requested_led_cmd = "NP_B"
+                led_hold_cmd = requested_led_cmd
+                led_hold_until = now + LED_HOLD_SECONDS
             else:
                 status_text = "NORMAL"
                 status_color = (0, 255, 0)
-                d435_led_cmd = "N"
+                requested_led_cmd = "NP_N"
+
+            if now < led_hold_until:
+                d435_led_cmd = led_hold_cmd
+            else:
+                d435_led_cmd = "NP_N"
 
             cv2.putText(display_frame, status_text, (15, 35),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, status_color, 3)
+            cv2.putText(display_frame, f"LED={d435_led_cmd}", (15, 65),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
 
-            last_d435_led_cmd = send_led_command(ser, d435_led_cmd, last_d435_led_cmd)
-            last_aux_np_cmd = send_serial_command(ser, aux_hold_state["np_cmd"], last_aux_np_cmd)
+            last_d435_led_cmd = send_serial_command(ser, d435_led_cmd, last_d435_led_cmd)
             last_aux_signal_cmd = send_serial_command(ser, aux_hold_state["signal_cmd"], last_aux_signal_cmd)
+            drain_serial_feedback(ser)
 
             key = cv2.waitKey(1) & 0xFF
 
@@ -1382,7 +1471,6 @@ def main():
             if show_capture_fullscreen and now >= show_capture_until:
                 show_capture_fullscreen = False
 
-            # 무단횡단: USB 웹캠 person 크롭
             if (not emergency_now) and jaywalking_detected and aux_frame is not None:
                 if now - last_jaywalk_count_time >= JAYWALK_COUNT_COOLDOWN:
                     boxes_for_crop = aux_person_boxes if len(aux_person_boxes) > 0 else last_aux_person_boxes
@@ -1414,7 +1502,6 @@ def main():
                     update_jaywalk_daily_stats()
                     today_count, last_detect_time = load_today_stats()
 
-            # 불법주차: D435 크롭
             if (not emergency_now) and illegal_parking_detected and best_illegal_parking_box is not None:
                 if now - last_parking_capture_time >= PARKING_CAPTURE_COOLDOWN:
                     capture_img = crop_box_with_margin(frame, best_illegal_parking_box, margin=25)
@@ -1438,7 +1525,6 @@ def main():
 
                     save_event("illegal_park", filename)
 
-            # 불법유턴: D435 크롭
             if (not emergency_now) and illegal_uturn_detected and best_uturn_box is not None:
                 if now - last_uturn_capture_time >= UTURN_CAPTURE_COOLDOWN:
                     capture_img = crop_box_with_margin(frame, best_uturn_box, margin=25)
@@ -1468,7 +1554,7 @@ def main():
             prev_raw_on_detected = raw_on_detected
 
             if show_emergency_fullscreen:
-                screen = make_emergency_fullscreen()
+                screen = make_emergency_fullscreen(display_frame)
             elif show_capture_fullscreen and last_capture is not None:
                 if capture_mode == "jaywalk":
                     screen = make_capture_fullscreen(
@@ -1524,9 +1610,9 @@ def main():
     finally:
         if ser:
             try:
-                ser.write(b"N\n")
                 ser.write(b"NP_N\n")
                 ser.write(b"TL_NORMAL\n")
+                time.sleep(0.1)
                 ser.close()
             except Exception:
                 pass
