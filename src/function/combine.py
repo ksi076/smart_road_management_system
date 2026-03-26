@@ -175,7 +175,7 @@ def update_jaywalk_daily_stats():
     today_str = datetime.now().strftime("%Y-%m-%d")         # 오늘 날짜만 추출
 
     cursor.execute("""
-        INSERT INTO daily_stats (stat_date, jaywalk_count, last_detect_time)
+        INSERT INTO daily_stats (stat_date, jaywalk_count, last_detect_time) 
         VALUES (?, 1, ?)
         ON CONFLICT(stat_date)
         DO UPDATE SET
@@ -189,26 +189,38 @@ def update_jaywalk_daily_stats():
     conn.close()
 
 
+# 역할 -> 대시보드나 통계 표시용으로 오늘 상황을 불러오는 함수다
 def load_today_stats():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now().strftime("%Y-%m-%d")   # 오늘 날짜 문자열
 
     cursor.execute("""
-        SELECT jaywalk_count, last_detect_time
+        SELECT jaywalk_count, last_detect_time   
         FROM daily_stats
         WHERE stat_date = ?
     """, (today_str,))
+    
+    # SELECT ~ : 오늘 날짜에 해당하는 통계만 가져온다
+    # fetchone() : 결과가 한 줄일 거라서 하나만 가져옴
+    # if row is None : 아직 오늘 무단횡단이 한 번도 기록되지 않았으면 기본값 반환
+    
 
-    row = cursor.fetchone()
+    row = cursor.fetchone()     # 한 줄만 가져옴
     conn.close()
 
-    if row is None:
-        return 0, "없음"
+    if row is None:             # 오늘 데이터가 없으면 기본값 반환
+        return 0, "없음"        
 
-    jaywalk_count, last_detect_time = row
+    jaywalk_count, last_detect_time = row   # 무단횡단자수와 최근감지시간을 가져옴
     return jaywalk_count, (last_detect_time if last_detect_time else "없음")
+
+
+
+
+# 이미지를 불러오는 함수 (프로그램을 다시 켰을때도 가장 최근의 이미지를 대시보드에 다시 보여주기 위함)
+
 
 
 def load_latest_event_image(event_type):
@@ -222,95 +234,117 @@ def load_latest_event_image(event_type):
         ORDER BY id DESC
         LIMIT 1
     """, (event_type,))
+    # DB에는 경로만 저장
+    # 실제이미지는 파일로 저장
+    # 필요할 떄 경로를 통해 다시 불러옴
 
     row = cursor.fetchone()
     conn.close()
 
-    if row is None or row[0] is None:
+    if row is None or row[0] is None:       # 해당 사건의 이미지 기록이 없으면 None
         return None
 
     image_path = row[0]
-    if not os.path.exists(image_path):
+    if not os.path.exists(image_path):      # 경로는 있는데 파일이 없으면 None
         return None
 
-    return cv2.imread(image_path)
+    return cv2.imread(image_path)           # 실제 이미지 파일을 읽어서 반환
 
 
 # =========================
 # 폰트 로드
 # =========================
+
+# 폰트가 없으면 한글 출력이 안되기 떄문에 시작할 때 바로 검사
 if not os.path.exists(FONT_PATH):
+
+    # 폰트가 없으면 정확한 에러를 보여주고 설치 방법까지 알려줌
     raise FileNotFoundError(
         f"폰트 파일을 찾을 수 없습니다: {FONT_PATH}\n"
         f"먼저 sudo apt install fonts-nanum 으로 설치하세요."
     )
 
-font_title = ImageFont.truetype(FONT_PATH, 38)
-font_panel_title = ImageFont.truetype(FONT_PATH, 24)
-font_big = ImageFont.truetype(FONT_PATH, 72)
-font_medium = ImageFont.truetype(FONT_PATH, 34)
-font_small = ImageFont.truetype(FONT_PATH, 22)
-font_tiny = ImageFont.truetype(FONT_PATH, 18)
-font_status = ImageFont.truetype(FONT_PATH, 28)
-font_emergency_big = ImageFont.truetype(FONT_PATH, 96)
-font_emergency_mid = ImageFont.truetype(FONT_PATH, 42)
+font_title = ImageFont.truetype(FONT_PATH, 38)          # 상단 큰 제목용
+font_panel_title = ImageFont.truetype(FONT_PATH, 24)    # 패널 제목용
+font_big = ImageFont.truetype(FONT_PATH, 72)            # 큰 강조 문구용
+font_medium = ImageFont.truetype(FONT_PATH, 34)         # 중간 글씨
+font_small = ImageFont.truetype(FONT_PATH, 22)          # 일반 안내 문구
+font_tiny = ImageFont.truetype(FONT_PATH, 18)           # 작은 안내 문구
+font_status = ImageFont.truetype(FONT_PATH, 28)         # 상태 표시용
+font_emergency_big = ImageFont.truetype(FONT_PATH, 96)  # 비상화면 큰 경고 문구
+font_emergency_mid = ImageFont.truetype(FONT_PATH, 42)  # 비상화면 부제목
+# 같은 폰트라도 크기를 여러개 만들어 놓고 상황에 맞게 쓰기 위한 구조
+
+
+
+
 
 # =========================
 # 유틸 함수
 # =========================
+
+# 이 함수가 없으면 대시보드에 한글 제목이나 문구를 예쁘게 넣기 어렵다
 def draw_korean_text(img, text, pos, font, color=(255, 255, 255)):
-    img_pil = Image.fromarray(img)
-    draw = ImageDraw.Draw(img_pil)
-    draw.text(pos, text, font=font, fill=color)
-    return np.array(img_pil)
+    img_pil = Image.fromarray(img)                  # OpenCV 이미지(numpy 배열)를 PIL 이미지로 변환
+    draw = ImageDraw.Draw(img_pil)                  # PIL 이미지에 글씨나 도형을 그릴 수 있게 준비
+    draw.text(pos, text, font=font, fill=color)     # 지정 위치에 텍스트 출력
+    return np.array(img_pil)                        # 다시 numpy(OpenCV스타일)배열로 되돌려서 이후 처리 가능하게 함
 
 
+
+
+
+# 지정한 영역 안에 자동 중앙정렬을 해주는 함수이다.
 def put_center_text_pil(img, text, area_x1, area_y1, area_x2, area_y2, font, color=(255, 255, 255)):
     img_pil = Image.fromarray(img)
     draw = ImageDraw.Draw(img_pil)
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-    x = area_x1 + (area_x2 - area_x1 - text_w) // 2
-    y = area_y1 + (area_y2 - area_y1 - text_h) // 2
-    draw.text((x, y), text, font=font, fill=color)
+    bbox = draw.textbbox((0, 0), text, font=font)       # 텍스트 크기 계산용 박스
+    text_w = bbox[2] - bbox[0]                          # 글자 폭
+    text_h = bbox[3] - bbox[1]                          # 글자 높이
+    x = area_x1 + (area_x2 - area_x1 - text_w) // 2     # 사각형 중앙 X 계산
+    y = area_y1 + (area_y2 - area_y1 - text_h) // 2     # 사각형 중앙 y 계산
+    draw.text((x, y), text, font=font, fill=color)      
     return np.array(img_pil)
 
 
+# 대시보드에서 "최근 무단횡단자 사진" 같은 박스 툴을 만드는 함수
 def draw_panel(img, x1, y1, x2, y2, title, title_color=(255, 255, 255)):
-    cv2.rectangle(img, (x1, y1), (x2, y2), (40, 40, 40), -1)
-    cv2.rectangle(img, (x1, y1), (x2, y2), (90, 90, 90), 2)
-    cv2.rectangle(img, (x1, y1), (x2, y1 + 48), (75, 75, 75), -1)
-    img = draw_korean_text(img, title, (x1 + 14, y1 + 10), font_panel_title, title_color)
+    cv2.rectangle(img, (x1, y1), (x2, y2), (40, 40, 40), -1)                # 패널 내부 배경색
+    cv2.rectangle(img, (x1, y1), (x2, y2), (90, 90, 90), 2)                 # 패널 테두리
+    cv2.rectangle(img, (x1, y1), (x2, y1 + 48), (75, 75, 75), -1)           # 상단 제목 바
+    img = draw_korean_text(img, title, (x1 + 14, y1 + 10), font_panel_title, title_color)   # 패널 제목 표시
     return img
 
 
+# 비율 유지, 중앙 정렬, 남는 공간 배경 채우기 역할을 해주는 함수
 def resize_with_padding(src, target_w, target_h, bg_color=(0, 0, 0)):
-    if src is None or src.size == 0:
-        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+    if src is None or src.size == 0:                                # 입력 이미지가 비어 있으면
+        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)  # 빈 캔버스 생성
         canvas[:] = bg_color
         return canvas
 
-    h, w = src.shape[:2]
+    h, w = src.shape[:2]            #원본 이미지 높이/너비
     if h == 0 or w == 0:
         canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
         canvas[:] = bg_color
         return canvas
 
-    scale = min(target_w / w, target_h / h)
-    new_w = max(1, int(w * scale))
-    new_h = max(1, int(h * scale))
+    scale = min(target_w / w, target_h / h)     # 비율 유지용 배율
+    new_w = max(1, int(w * scale))              # 새 너비
+    new_h = max(1, int(h * scale))              # 새 높이
 
-    resized = cv2.resize(src, (new_w, new_h))
-    canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+    resized = cv2.resize(src, (new_w, new_h))                   # 비율 유지 resize
+    canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)  # 목표 크기 빈 캔버스
     canvas[:] = bg_color
 
-    x_offset = (target_w - new_w) // 2
-    y_offset = (target_h - new_h) // 2
+    x_offset = (target_w - new_w) // 2          # 가로 중앙 정렬
+    y_offset = (target_h - new_h) // 2          # 세로 중앙 정렬
     canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
     return canvas
 
 
+# 위의 함수는 이미지 하나만 반환하지만, 이 함수는 추가로 새 너비, 새 높이, 좌측 여백, 상단 여백 까지 반환한다.
+#  캡처 전체화면에 거리 정보 박스를 이미지 옆에 띄울 때, 이미지가 실제 어디에 놓여있는지 알기 위한 함수
 def resize_with_padding_info(src, target_w, target_h, bg_color=(0, 0, 0)):
     if src is None or src.size == 0:
         canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
@@ -338,53 +372,65 @@ def resize_with_padding_info(src, target_w, target_h, bg_color=(0, 0, 0)):
     return canvas, new_w, new_h, x_offset, y_offset
 
 
+
+
 def open_aux_camera(index):
-    cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
-    if cap.isOpened():
-        return cap
-    return cv2.VideoCapture(index)
+    cap = cv2.VideoCapture(index, cv2.CAP_V4L2)         # 리눅스 환경에서 카메라를 여는 일반적인 방식
+    if cap.isOpened():              
+        return cap                                      # 성공하면 바로 반환
+    return cv2.VideoCapture(index)                      # 살패하면 일반 방식 재시도
 
 
+
+
+# 사람 박스가 횡단보도 ROI와 얼마나 겹치는지, 차량 박스가 차도 ROI와 얼마나 겹치는지를 계산하기 위한 함수이다.
 def intersection_area(boxA, boxB):
     ax1, ay1, ax2, ay2 = boxA
     bx1, by1, bx2, by2 = boxB
 
-    ix1 = max(ax1, bx1)
-    iy1 = max(ay1, by1)
-    ix2 = min(ax2, bx2)
-    iy2 = min(ay2, by2)
+    ix1 = max(ax1, bx1)     # 겹치는 시작 X
+    iy1 = max(ay1, by1)     # 겹치는 시작 Y
+    ix2 = min(ax2, bx2)     # 겹치는 끝 X
+    iy2 = min(ay2, by2)     # 겹치는 끝 Y
 
-    if ix2 <= ix1 or iy2 <= iy1:
+    if ix2 <= ix1 or iy2 <= iy1:    # 안 겹치면 면적 0
         return 0
 
-    return (ix2 - ix1) * (iy2 - iy1)
+    return (ix2 - ix1) * (iy2 - iy1)        #겹치는 사각형 면적
 
 
+
+
+# 박스자체 면적 계산
 def box_area(box):
     x1, y1, x2, y2 = box
     return max(0, x2 - x1) * max(0, y2 - y1)
 
 
+
 def overlap_ratio(det_box, roi_box):
-    det_area = box_area(det_box)
+    det_area = box_area(det_box)    # 검출 박스 면적
     if det_area == 0:
         return 0.0
-    inter = intersection_area(det_box, roi_box)
-    return inter / det_area
+    inter = intersection_area(det_box, roi_box)     # 겹침 면적
+    return inter / det_area                         # 검출 박스 기준 겹침 비율
 
 
-def build_rect_mask(width, height, rects):
-    mask = np.zeros((height, width), dtype=np.uint8)
+
+# ROI들을 사각형으로 그린 마스크를 만드는 함수이다.
+def build_rect_mask(width, height, rects):      
+    mask = np.zeros((height, width), dtype=np.uint8)    # 전체 검은 배경 마스크
     for (x1, y1, x2, y2) in rects:
-        x1 = max(0, min(x1, width - 1))
+        x1 = max(0, min(x1, width - 1))             # 좌표 보정
         y1 = max(0, min(y1, height - 1))
         x2 = max(0, min(x2, width))
         y2 = max(0, min(y2, height))
         if x2 > x1 and y2 > y1:
-            mask[y1:y2, x1:x2] = 255
+            mask[y1:y2, x1:x2] = 255        # ROI 부분만 흰색으로 채움
     return mask
 
 
+# 사각형 ROI 하나하나 비교하는 대신, 미리 만든 흰색 마스크와 겹치는 비율을 빠르게 계산하기 위한 함수
 def overlap_ratio_with_mask(det_box, mask):
     x1, y1, x2, y2 = det_box
     h, w = mask.shape[:2]
@@ -397,12 +443,13 @@ def overlap_ratio_with_mask(det_box, mask):
     if x2 <= x1 or y2 <= y1:
         return 0.0
 
-    roi = mask[y1:y2, x1:x2]
+    roi = mask[y1:y2, x1:x2]        # 박스에 해당하는 마스크 부분만 잘라냄
     white = cv2.countNonZero(roi)
     total = (x2 - x1) * (y2 - y1)
     return white / total if total > 0 else 0.0
 
 
+# 탐지 박스에 딱 맞게 자르면 보기좋지 않기 때문에 주변 여유를 살짝 포함해서 저장하기 위한 함수이다.
 def crop_box_with_margin(frame, box, margin=20):
     if frame is None or frame.size == 0:
         return None
@@ -410,6 +457,7 @@ def crop_box_with_margin(frame, box, margin=20):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = box
 
+    # 여유 공간 확보
     x1 = max(0, x1 - margin)
     y1 = max(0, y1 - margin)
     x2 = min(w, x2 + margin)
@@ -423,37 +471,38 @@ def crop_box_with_margin(frame, box, margin=20):
 
 def judge_warning_light(roi):
     if roi is None or roi.size == 0:
-        return "OFF", 0.0, 0.0, None
+        return "OFF", 0.0, 0.0, None        # ROI가 비어 있으면 OFF 처리
 
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)  # RGB -> HSV 변환 (색 범위 분리가 쉬워서 빨강/초록 판정에 유리함)
 
-    lower_red_1 = np.array([0, 80, 80])
+    lower_red_1 = np.array([0, 80, 80])         # 빨강 범위 1
     upper_red_1 = np.array([10, 255, 255])
-    lower_red_2 = np.array([160, 80, 80])
+    lower_red_2 = np.array([160, 80, 80])       # 빨강 범위 2
     upper_red_2 = np.array([180, 255, 255])
 
-    mask1 = cv2.inRange(hsv, lower_red_1, upper_red_1)
-    mask2 = cv2.inRange(hsv, lower_red_2, upper_red_2)
-    red_mask = cv2.bitwise_or(mask1, mask2)
+    mask1 = cv2.inRange(hsv, lower_red_1, upper_red_1)      # 빨강 마스크 1
+    mask2 = cv2.inRange(hsv, lower_red_2, upper_red_2)      # 빨강 마스크 2
+    red_mask = cv2.bitwise_or(mask1, mask2)                 # 둘 합치기
 
-    kernel = np.ones((3, 3), np.uint8)
-    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
-    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_DILATE, kernel)
+    kernel = np.ones((3, 3), np.uint8)          #노이즈 제거용 커널
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)   # 작은 잡음 제거
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_DILATE, kernel) # 빨간 영역 확장
 
-    red_pixels = cv2.countNonZero(red_mask)
-    total_pixels = roi.shape[0] * roi.shape[1]
-    red_ratio = red_pixels / total_pixels if total_pixels > 0 else 0.0
+    red_pixels = cv2.countNonZero(red_mask)         # 빨간 픽셀 수
+    total_pixels = roi.shape[0] * roi.shape[1]      # ROI 전체 픽셀 수
+    red_ratio = red_pixels / total_pixels if total_pixels > 0 else 0.0  # 빨간 비율
 
-    v_channel = hsv[:, :, 2]
-    mean_v = cv2.mean(v_channel, mask=red_mask)[0] if red_pixels > 0 else 0.0
+    v_channel = hsv[:, :, 2]    # 밝기 채널(V)
+    mean_v = cv2.mean(v_channel, mask=red_mask)[0] if red_pixels > 0 else 0.0   # 빨간 부분 평균 밝기
 
-    RED_RATIO_THRESHOLD = 0.03
-    BRIGHTNESS_THRESHOLD = 180
+    RED_RATIO_THRESHOLD = 0.03  # 빨간색 비율 3% 이상
+    BRIGHTNESS_THRESHOLD = 180  # 밝기까지 고려 (단순 빨간 물체가 아니라 실제로 켜진 경광등인지 확인(오탐 방지 로직))
 
     state = "ON" if red_ratio >= RED_RATIO_THRESHOLD and mean_v >= BRIGHTNESS_THRESHOLD else "OFF"
     return state, red_ratio, mean_v, red_mask
 
 
+# 신호등 색깔 판정 함수 (위치가 고정이기 떄문에 좌표 고정으로 판단)
 def judge_traffic_signal(roi):
     if roi is None or roi.size == 0:
         return "UNKNOWN", 0.0, 0.0, None, None
@@ -465,13 +514,13 @@ def judge_traffic_signal(roi):
     lower_red_2 = np.array([160, 80, 80])
     upper_red_2 = np.array([180, 255, 255])
 
-    lower_green = np.array([40, 80, 80])
+    lower_green = np.array([40, 80, 80])        # 초록 범위
     upper_green = np.array([90, 255, 255])
 
     red_mask1 = cv2.inRange(hsv, lower_red_1, upper_red_1)
     red_mask2 = cv2.inRange(hsv, lower_red_2, upper_red_2)
     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+    green_mask = cv2.inRange(hsv, lower_green, upper_green) # 초록 마스크
 
     kernel = np.ones((3, 3), np.uint8)
     red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
@@ -489,30 +538,30 @@ def judge_traffic_signal(roi):
     RED_THRESHOLD = 0.03
     GREEN_THRESHOLD = 0.03
 
-    if red_ratio >= RED_THRESHOLD and red_ratio > green_ratio:
+    if red_ratio >= RED_THRESHOLD and red_ratio > green_ratio:          # 빨강 비율이 충분히 크고 초록보다 크면 RED
         signal_state = "RED"
-    elif green_ratio >= GREEN_THRESHOLD and green_ratio > red_ratio:
+    elif green_ratio >= GREEN_THRESHOLD and green_ratio > red_ratio:    # 초록 비율이 충분히 크고 빨강보다 크면 GREEN
         signal_state = "GREEN"
-    else:
+    else:                                                               # 둘 다 애매하면 UNKNOWN
         signal_state = "UNKNOWN"
 
     return signal_state, red_ratio, green_ratio, red_mask, green_mask
 
 
 def send_serial_command(ser, cmd, last_cmd):
-    if ser is None or cmd is None:
-        return last_cmd
+    if ser is None or cmd is None:              # 시리얼 객체가 없으면
+        return last_cmd                         # 아무것도 하지 않고 이전 명령 유지
 
-    if cmd != last_cmd:
+    if cmd != last_cmd:                         # 이번 명령이 이전 명령과 다를 때만 전송 ( 같은 명령을 매 프레임 보내면 비효율적이라서)
         try:
-            ser.write((cmd + "\n").encode())
-            print(f"[SERIAL] sent: {cmd}")
-            return cmd
+            ser.write((cmd + "\n").encode())    # 문자열 + 줄바꿈 전송
+            print(f"[SERIAL] sent: {cmd}")      # 디버그 출력
+            return cmd                          # 방금 보낸 명령을 새로운 Last_cmd로 저장 
         except Exception as e:
             print(f"[SERIAL] 전송 실패: {e}")
             return last_cmd
 
-    return last_cmd
+    return last_cmd                             # 같은 명령이면 중복 전송 안함
 
 
 def drain_serial_feedback(ser):
@@ -530,6 +579,9 @@ def drain_serial_feedback(ser):
 # =========================
 # USB 웹캠 분석
 # =========================
+
+
+# 보조 웹캠에서 가장 크게 잡힌 사람을 저장
 def crop_best_aux_person(aux_frame, aux_person_boxes, margin=20):
     if aux_frame is None or len(aux_person_boxes) == 0:
         return None
@@ -538,8 +590,8 @@ def crop_best_aux_person(aux_frame, aux_person_boxes, margin=20):
     best_area = -1
 
     for (x1, y1, x2, y2, conf, label_name) in aux_person_boxes:
-        area = (x2 - x1) * (y2 - y1)
-        if area > best_area:
+        area = (x2 - x1) * (y2 - y1)            # 사람 박스 면적 계산
+        if area > best_area:                    # 가장 큰 사람 박스를 선택
             best_area = area
             best_box = (x1, y1, x2, y2)
 
@@ -549,12 +601,14 @@ def crop_best_aux_person(aux_frame, aux_person_boxes, margin=20):
     return crop_box_with_margin(aux_frame, best_box, margin=margin)
 
 
+
+# 경광등 ON/OFF 확인, 사람/차량 박스 저장, 화면에 시각화, hold_state 업데이트 수행 함수
 def analyze_aux_frame(aux_frame, results, model_names, hold_state):
-    out = aux_frame.copy()
-    aux_red_masks = []
+    out = aux_frame.copy()      # 원본을 보존하고 출력용 프레임 생성
+    aux_red_masks = []          
     aux_extra_masks = []
-    aux_person_boxes = []
-    aux_vehicle_boxes = []
+    aux_person_boxes = []       # 보조 카메라 사람 박스 목록
+    aux_vehicle_boxes = []      # 보조 카메라 차량 박스 목록
 
     now = time.time()
     h, w = aux_frame.shape[:2]
