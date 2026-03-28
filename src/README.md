@@ -4,8 +4,6 @@
 
 ### 1️⃣ 시스템 초기화 및 통합 제어 구조
 
-- **역할**
-  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 - **핵심 코드**
 
  ```python
@@ -32,15 +30,13 @@ config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 ```
 - **설명**
-  - 객체 탐지, 거리 측정, 이벤트 저장, 하드웨어 제어를 하나의 프로그램으로 통합하여 스마트 도로 관제 시스템 구조를 구성하였다.
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 
 
 ---
 
 ### 2️⃣ ROI 기반 영역 설정
 
-- **카메라 프레임 입력:**
-  ○ read_frame 함수로 실시간 영상 획득
   
 - **핵심 코드**
 
@@ -77,8 +73,9 @@ CROSSWALK_ROIS = [
 # 신호등 고정위치 좌표
 SIGNAL_ROI = (568, 111, 628, 133)
 ```
-- **전처리:**
-  ○ resize_frame으로 YOLO 입력 크기 조정  
+- **설명**
+  - 도로, 횡단보도, 신호등 영역을 ROI(Region of Interest) 좌표로 직접 설정하였다.
+  - 이후 YOLO로 검출된 사람 및 차량 객체와 ROI의 겹침 비율을 계산하여 무단횡단, 차량 침범, 불법 유턴 등의 이벤트를 위치 기반으로 판정하였다.
 
 ---
 
