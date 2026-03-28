@@ -142,13 +142,14 @@
 
 ## 🎥 시연 영상
 
-### [인도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1JJZ4wy2REE9QvrCth4uMI0Oh-UzQre7v/view?usp=sharing)
+### [횡단보도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1JJZ4wy2REE9QvrCth4uMI0Oh-UzQre7v/view?usp=sharing)
 
 <div>
  <img src="./gif/display/횡단보도무단횡단.gif" width="580" height="500" align="top">
  <img src="./gif/reality/횡단보도_무단횡단.gif" width="250" height="340" align="top">
 </div>
-
+- 차량신호등 빨간불에 사람객체가 횡단보도 ROI에 0.3 이상 침범 시 무단횡단 판정
+- 이후 디스플레이에 크롭하여 출력 및 야간엔 네오 픽셀 빨강 LED 점등
 
 
 ### [차도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/10VPleeBBzlbaidgrZ4XxjRO3DYnDbJa4/view?usp=sharing)
