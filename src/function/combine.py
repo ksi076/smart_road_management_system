@@ -1364,7 +1364,7 @@ def main():
                     cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
 
                     # 거리 계산
-                    if is_jaywalking:
+                      if is_jaywalking:
                         #사람 중심점 계산
                         cx = int((x1 + x2) / 2)
                         cy = int((y1 + y2) / 2)
@@ -1373,8 +1373,8 @@ def main():
                         person_depth = get_valid_depth_median(depth_frame, cx, cy, patch_size=PATCH_SIZE) # 사람중심점 깊이 값 구하기
 
                         
-                        if person_depth > 0:
-                            prepare_line_points()
+                        if person_depth > 0: #depth값 유효성 체크
+                            prepare_line_points() # 기준선 준비
                             
                             # 사람 중심 점을 3D 좌표로 변환
                             if line_points_3d_cache:
@@ -1383,7 +1383,7 @@ def main():
                                 min_dist_m = float("inf")
                                 closest_line_pixel = None
 
-                                for lpix, l3d in zip(line_pixels_cache, line_points_3d_cache):
+                                for lpix, l3d in zip(line_pixels_cache, line_points_3d_cache): # 최소 거리 찾기 (사람 vs 기준선 각 점 거리 계산)
                                     dist = euclidean_distance(person_3d, l3d)
 
                                     # 사람과 기준선 위 샘플 점들 사이 거리중 가장 작은 값 찾기
