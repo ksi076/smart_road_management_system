@@ -306,32 +306,47 @@ def judge_traffic_signal(roi):
 
 - **핵심 코드**
 
- ```python
- # =========================
-# 시스템 초기화
+```python
+# =========================
+# D435 기반 거리 측정
 # =========================
 
-# DB 초기화
-init_db()
+ # 거리 계산
+                    if is_jaywalking:
+                        #사람 중심점 계산
+                        cx = int((x1 + x2) / 2)
+                        cy = int((y1 + y2) / 2)
+                        cv2.circle(display_frame, (cx, cy), 5, (0, 0, 255), -1) # 그 중심점에 점 표시
 
-# YOLO 모델 로드
-model = YOLO(MODEL_PATH)
+                        person_depth = get_valid_depth_median(depth_frame, cx, cy, patch_size=PATCH_SIZE) # 사람중심점 깊이 값 구하기
 
-# 아두이노 시리얼 연결
-ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+                        
+                        if person_depth > 0: #depth값 유효성 체크
+                            prepare_line_points() # 기준선 준비
+                            
+                            # 사람 중심 점을 3D 좌표로 변환
+                            if line_points_3d_cache:
+                                person_3d = deproject_to_3d(intr, cx, cy, person_depth)
 
-# 보조 카메라 초기화 (USB 웹캠)
-aux_cap = open_aux_camera(AUX_CAM_INDEX)
+                                min_dist_m = float("inf")
+                                closest_line_pixel = None
 
-# RealSense D435 초기화
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+                                for lpix, l3d in zip(line_pixels_cache, line_points_3d_cache): # 최소 거리 찾기 (사람 vs 기준선 각 점 거리 계산)
+                                    dist = euclidean_distance(person_3d, l3d)
+
+                                    # 사람과 기준선 위 샘플 점들 사이 거리중 가장 작은 값 찾기
+                                    if dist < min_dist_m:
+                                        min_dist_m = dist
+                                        closest_line_pixel = lpix
+
+                                dist_cm = min_dist_m * 100.0    # D435 거리값은 meter 단위라서 cm단위로 변환
+                                current_min_dist_cm = dist_cm
 ```
 - **설명**
-  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
-
+ - **설명**
+  - Intel RealSense D435의 깊이 정보를 활용하여 사람 객체 중심점의 실제 거리를 계산하였다.
+  - 중심점의 depth 값을 구한 뒤, 2D 픽셀 좌표를 3D 공간 좌표로 변환하고, 횡단보도 기준선 샘플 점들과의 유클리드 거리를 비교하여 최소 거리를 산출하였다.
+  - 이를 통해 무단횡단 상황을 단순 검출이 아닌 실제 거리(cm) 정보와 함께 표시할 수 있도록 구현하였다.
 ---
 
 
