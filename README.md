@@ -148,6 +148,7 @@
  <img src="./gif/display/횡단보도무단횡단.gif" width="580" height="500" align="top">
  <img src="./gif/reality/횡단보도_무단횡단.gif" width="250" height="340" align="top">
 </div>
+
 ####차량신호등 빨간불에 사람객체가 횡단보도 ROI에 0.3 이상 침범 시 무단횡단 판정
 ####이후 디스플레이에 크롭하여 출력 및 야간엔 네오 픽셀 빨강 LED 점등
 
