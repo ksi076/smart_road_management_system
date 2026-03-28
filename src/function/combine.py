@@ -615,14 +615,14 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
     emergency_detected_now = False
 
     if results is not None and len(results) > 0:
-        result = results[0]
+        result = results[0]                                     
         if result.boxes is not None and len(result.boxes) > 0:
-            boxes_xyxy = result.boxes.xyxy.cpu().numpy()
-            confs = result.boxes.conf.cpu().numpy()
-            classes = result.boxes.cls.cpu().numpy()
+            boxes_xyxy = result.boxes.xyxy.cpu().numpy()            # 박스 좌표
+            confs = result.boxes.conf.cpu().numpy()                 # confidence
+            classes = result.boxes.cls.cpu().numpy()                # 클래스 ID
             names = result.names if hasattr(result, "names") else model_names
 
-            for idx, (box, conf, cls_id) in enumerate(zip(boxes_xyxy, confs, classes)):
+            for idx, (box, conf, cls_id) in enumerate(zip(boxes_xyxy, confs, classes)):    # 탐지된 객체를 하나씩 순회 
                 x1, y1, x2, y2 = map(int, box)
 
                 x1 = max(0, min(x1, w - 1))
@@ -633,9 +633,13 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
                 if x2 <= x1 or y2 <= y1:
                     continue
 
+                # 좌표를 정수로 바꾸고, 이미지 범위 넘지 않게 보정, 폭이나 높이가 0인 이상한 박스 건너뜀
+
                 label_name = names[int(cls_id)]
                 label_lower = label_name.lower()
 
+
+                # YOLO가 경광등 후보를 잡으면 그 ROI만 잘라서 judge_warning_light()로 진짜 켜졌는지 색 분석을 함
                 if label_lower in {c.lower() for c in WARNING_CLASSES}:
                     roi = aux_frame[y1:y2, x1:x2]
                     final_state, red_ratio, mean_v, red_mask = judge_warning_light(roi)
@@ -643,12 +647,15 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
                     if red_mask is not None:
                         aux_red_masks.append((idx, red_mask))
 
+                    # 실제 ON이면 빨강 박스, OFF면 파랑 박스료 표시
                     color = (0, 0, 255) if final_state == "ON" else (255, 0, 0)
 
-                    if final_state == "ON":
-                        emergency_detected_now = True
-                        hold_state["last_warning_on_time"] = now
 
+                    if final_state == "ON":  # ON이 감지되면
+                        emergency_detected_now = True  # 비상상황 플래그를 킴
+                        hold_state["last_warning_on_time"] = now  # 마지막 감지 시각 갱신
+
+                    # 최종상태 ON/OFF 출력, YOLO모델이 무슨 클래스를 잡았는지, 빨강비율과 밝기 표시 (왜 ON/OFF가 나왔는지 확인가능)
                     cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(out, f"{final_state}", (x1, max(y1 - 10, 25)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
@@ -659,14 +666,16 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
                                 (x1, min(y2 + 34, h - 2)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1)
 
+                 # 사람 클래스 처리            
                 elif label_lower in {c.lower() for c in PERSON_CLASSES}:
-                    aux_person_boxes.append((x1, y1, x2, y2, float(conf), label_name))
-                    color = (0, 255, 255)
+                    aux_person_boxes.append((x1, y1, x2, y2, float(conf), label_name)) # 사람박스를 리스트에 저장
+                    color = (0, 255, 255)   #화면에는 노란색 박스로 표시
                     cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(out, f"{label_name} {conf:.2f}",
                                 (x1, max(y1 - 10, 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
+                # 차량 클래스 처리 (사람과 비슷하게 리스트에 저장하고 시각화한다.)
                 elif label_lower in {c.lower() for c in VEHICLE_CLASSES}:
                     aux_vehicle_boxes.append((x1, y1, x2, y2, float(conf), label_name))
                     color = (0, 255, 255)
@@ -675,39 +684,48 @@ def analyze_aux_frame(aux_frame, results, model_names, hold_state):
                                 (x1, max(y1 - 10, 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
+
+                # fall 클래스 처리 
                 elif label_lower in {c.lower() for c in FALL_CLASSES}:
-                    color = (255, 0, 255)
+                    color = (255, 0, 255) # fall클래스는 보라색으로 표시
                     cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(out, f"{label_name} {conf:.2f}",
                                 (x1, max(y1 - 10, 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-    warning_override_active = (now - hold_state["last_warning_on_time"]) <= WARNING_HOLD_SECONDS
-    hold_state["signal_cmd"] = "TL_ALL" if warning_override_active else "TL_NORMAL"
+    #경광등 유지 로직 (USB웹캠은 신호등전체켜기 (비상제어) 판단에 큰 역할을 함)
+    warning_override_active = (now - hold_state["last_warning_on_time"]) <= WARNING_HOLD_SECONDS # 방금 ON이 아니더라도 마지막 ON시간으로부터 3초 이내면 비상상태 유지
+    hold_state["signal_cmd"] = "TL_ALL" if warning_override_active else "TL_NORMAL" #경광등 유지 중이면 TL_ALL, 아니면 TL_NORMAL
 
     status_text = "USB EMERGENCY LIGHT ON" if emergency_detected_now else "USB NORMAL"
     status_color = (0, 0, 255) if emergency_detected_now else (0, 255, 0)
     cv2.putText(out, status_text, (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
 
-    if warning_override_active:
+    if warning_override_active:  #비상유지시간이 아직 남아있으면 화면에 몇초남았는지 같이 표시
         remain = WARNING_HOLD_SECONDS - (now - hold_state["last_warning_on_time"])
         cv2.putText(out, f"TRAFFIC ALL ON: {remain:.1f}s", (15, 65),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
 
     return out, aux_red_masks, aux_extra_masks, hold_state, aux_person_boxes, aux_vehicle_boxes
+    # out : 시각화 완료된 보조 카메라 화면, aux_red_masks : 경광등 빨간 마스크들, aux_extra_masks : 추가마스크, hold_state: 유지상태정보, aux_person_boxes : 보조카메라 사람목록, aux_vehucle_boxes : 보조카메라 차량목록
+    # 이 함수는 USB웹캠 쪽 전체 판단 결과를 한번에 정리해서 돌려주는 함수임
+
+
+
 
 
 # =========================
 # 대시보드
 # =========================
-def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_frame, d435_frame):
-    dashboard = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8)
-    dashboard[:] = (18, 18, 22)
 
-    cv2.rectangle(dashboard, (0, 0), (DASHBOARD_WIDTH, 78), (25, 52, 96), -1)
+def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_frame, d435_frame):
+    dashboard = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8) #전체 배경 캔버스 생성
+    dashboard[:] = (18, 18, 22)     # 어두운 회식 배경으로 채움
+
+    cv2.rectangle(dashboard, (0, 0), (DASHBOARD_WIDTH, 78), (25, 52, 96), -1)   #상단 타이틀 바
     dashboard = draw_korean_text(dashboard, "AI기반 스마트도로 시스템", (28, 18), font_title, (255, 255, 255))
 
-    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S") #현재 시각 문자열
     dashboard = draw_korean_text(dashboard, current_time_str, (860, 20), font_medium, (255, 255, 255))
 
     left_x1 = 30
@@ -725,15 +743,22 @@ def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_fra
     img_w = 500
     img_h = 90
 
+    # 최근 무단횡단자 사진 넣기
     if jaywalk_capture is not None and jaywalk_capture.size > 0:
         capture_view = resize_with_padding(jaywalk_capture, img_w, img_h, bg_color=(0, 0, 0))
         dashboard[170:170 + img_h, img_x:img_x + img_w] = capture_view
+
+        # 최근 무단횡단자 사진이 있으면 패널 크기에 맞게 resize해서 넣음
+
     else:
         empty_view = np.zeros((img_h, img_w, 3), dtype=np.uint8)
         empty_view[:] = (25, 25, 25)
         empty_view = put_center_text_pil(empty_view, "캡처 이미지 없음", 0, 0, img_w, img_h, font_small, (180, 180, 180))
         dashboard[170:170 + img_h, img_x:img_x + img_w] = empty_view
 
+        # 없다면 빈박스를 생성하고, 가운데 "캡처 이미지 없음"으로 표시
+
+        # 최근 불법주차 사진도 위와 같은 방식으로 진행
     if illegal_park_capture is not None and illegal_park_capture.size > 0:
         park_view = resize_with_padding(illegal_park_capture, img_w, img_h, bg_color=(0, 0, 0))
         dashboard[350:350 + img_h, img_x:img_x + img_w] = park_view
@@ -743,6 +768,7 @@ def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_fra
         empty_view = put_center_text_pil(empty_view, "캡처 이미지 없음", 0, 0, img_w, img_h, font_small, (180, 180, 180))
         dashboard[350:350 + img_h, img_x:img_x + img_w] = empty_view
 
+        # 최근 불법유턴 사진도 위와 같은 방식으로 진행
     if uturn_capture is not None and uturn_capture.size > 0:
         uturn_view = resize_with_padding(uturn_capture, img_w, img_h, bg_color=(0, 0, 0))
         dashboard[530:530 + img_h, img_x:img_x + img_w] = uturn_view
@@ -754,6 +780,7 @@ def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_fra
 
     dashboard = draw_panel(dashboard, 690, 110, 1240, 360, "D435 실시간", (255, 255, 255))
 
+    # D435웹캠 화면을 실시간으로 출력
     if d435_frame is not None and d435_frame.size > 0:
         d435_view = resize_with_padding(d435_frame, 470, 180, bg_color=(0, 0, 0))
         dashboard[160:160 + 180, 730:730 + 470] = d435_view
@@ -765,6 +792,7 @@ def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_fra
 
     dashboard = draw_panel(dashboard, 690, 380, 1240, 650, "추가 카메라 탐지 화면", (255, 210, 80))
 
+    # USB웹캠화면도 실시간으로 출력
     if aux_frame is not None and aux_frame.size > 0:
         aux_view = resize_with_padding(aux_frame, 470, 200, bg_color=(0, 0, 0))
         dashboard[430:430 + 200, 730:730 + 470] = aux_view
@@ -785,8 +813,9 @@ def make_dashboard(jaywalk_capture, illegal_park_capture, uturn_capture, aux_fra
     return dashboard
 
 
+# 캡처 전체화면 함수
 def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm=None):
-    screen = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8)
+    screen = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8) # 사건이 발생했을때 대시보드 대신 크게보여줄 전체화면용 캔버스를 만든다
     screen[:] = (10, 10, 10)
 
     cv2.rectangle(screen, (0, 0), (DASHBOARD_WIDTH, 80), (120, 30, 30), -1)
@@ -795,11 +824,13 @@ def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     screen = draw_korean_text(screen, current_time_str, (860, 22), font_small, (255, 255, 255))
 
+    # 캡처이미지를 넣을 메인 패널을 중앙에 크게 하나 만든다.
     panel_x1, panel_y1 = 60, 110
     panel_x2, panel_y2 = 1220, 660
     cv2.rectangle(screen, (panel_x1, panel_y1), (panel_x2, panel_y2), (35, 35, 35), -1)
     cv2.rectangle(screen, (panel_x1, panel_y1), (panel_x2, panel_y2), (100, 100, 100), 2)
 
+    # 실제 캡처 이미지를 큰 영역에 배치하는 부분
     img_x = 100
     img_y = 135
     img_w = 1080
@@ -808,15 +839,16 @@ def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm
     full_capture, new_w, new_h, x_offset, y_offset = resize_with_padding_info(capture_img, img_w, img_h, bg_color=(0, 0, 0))
     screen[img_y:img_y + img_h, img_x:img_x + img_w] = full_capture
 
+    # 거리 정보 박스
     if distance_cm is not None:
         right_padding = img_w - (x_offset + new_w)
 
-        if right_padding >= 220:
+        if right_padding >= 220:    # 이미지 오른쪽에 여백이 충분하면 그 여백안에 거리 정보 박스를 붙임
             box_x1 = img_x + x_offset + new_w + 20
             box_y1 = img_y + 120
             box_x2 = img_x + img_w - 20
             box_y2 = img_y + 320
-        else:
+        else:                       # 여백이 부족하면 미리 정한 고정위치에 박스 배치
             box_x1 = 910
             box_y1 = 170
             box_x2 = 1180
@@ -825,6 +857,7 @@ def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm
         cv2.rectangle(screen, (box_x1, box_y1), (box_x2, box_y2), (25, 25, 25), -1)
         cv2.rectangle(screen, (box_x1, box_y1), (box_x2, box_y2), (0, 200, 255), 2)
 
+        
         screen = draw_korean_text(screen, "거리 정보", (box_x1 + 20, box_y1 + 18), font_small, (0, 220, 255))
         screen = draw_korean_text(screen, f"{distance_cm:.1f} cm", (box_x1 + 22, box_y1 + 78), font_medium, (255, 255, 255))
         screen = draw_korean_text(screen, "무단횡단자와", (box_x1 + 22, box_y1 + 138), font_tiny, (210, 210, 210))
@@ -837,13 +870,15 @@ def make_capture_fullscreen(capture_img, title_text="캡처 화면", distance_cm
 # =========================
 # 비상화면 + D435 실시간 화면 포함
 # =========================
+
+#비상 전체화면 함수
 def make_emergency_fullscreen(live_frame=None):
     screen = np.zeros((DASHBOARD_HEIGHT, DASHBOARD_WIDTH, 3), dtype=np.uint8)
 
     now = time.time()
-    blink_on = int(now / EMERGENCY_BLINK_INTERVAL) % 2 == 0
+    blink_on = int(now / EMERGENCY_BLINK_INTERVAL) % 2 == 0   # 비상화면 깜박임 코드 (0.5초마다 True/False가바뀐다)
 
-    if blink_on:
+    if blink_on:        #비상화면 전체가 번쩍이면서 비상상태 시각적 강조
         screen[:] = (20, 20, 60)
         banner_color = (0, 0, 255)
         title_color = (255, 255, 0)
@@ -891,6 +926,9 @@ def make_emergency_fullscreen(live_frame=None):
     guide_color = (255, 255, 0) if blink_on else (180, 180, 120)
     screen = put_center_text_pil(screen, "비상상태가 유지되고 있습니다.", 250, 640, 1030, 700, font_small, guide_color)
 
+
+
+
     # =========================
     # 우측 상단 D435 실시간 화면 박스
     # =========================
@@ -927,6 +965,9 @@ def make_emergency_fullscreen(live_frame=None):
 # =========================
 # D435 / 거리 계산
 # =========================
+
+# D435 깊이 프레임에서 한 점만 보는게 아니라 주변 5x5영역을 돌면서 유효한 깊이 값들을 모은다.(안정적임)
+# 평균보다 중앙값이 노이즈나 이상치에 강함 (중앙값 사용)
 def get_valid_depth_median(depth_frame, cx, cy, patch_size=5):
     half = patch_size // 2
     values = []
@@ -936,7 +977,7 @@ def get_valid_depth_median(depth_frame, cx, cy, patch_size=5):
 
     for y in range(max(0, cy - half), min(height, cy + half + 1)):
         for x in range(max(0, cx - half), min(width, cx + half + 1)):
-            d = depth_frame.get_distance(x, y)
+            d = depth_frame.get_distance(x, y)    # 해당 픽셀 거리
             if d > 0:
                 values.append(d)
 
@@ -946,11 +987,13 @@ def get_valid_depth_median(depth_frame, cx, cy, patch_size=5):
     return float(np.median(values))
 
 
+# 2D 화면 픽셀 (x, y)와 깊이값 depth_m를 실제 3차원 좌표 (X,Y,Z)로 바꿔준다.
 def deproject_to_3d(intrinsics, x, y, depth_m):
     point_3d = rs.rs2_deproject_pixel_to_point(intrinsics, [x, y], depth_m)
     return np.array(point_3d, dtype=np.float32)
 
 
+# 횡단보도 기준선을 한번에 처리하지않고 선 위에 샘플 점 80개를 뿌리는 함수
 def sample_line_points(pt1, pt2, n=80):
     x1, y1 = pt1
     x2, y2 = pt2
@@ -965,6 +1008,7 @@ def sample_line_points(pt1, pt2, n=80):
     return pts
 
 
+# 3차원 점 p1, p2사이의 실제 거리 계산 (사람과 횡단보도 기준선 거리 계산의 마지막 단계)
 def euclidean_distance(p1, p2):
     return float(np.linalg.norm(p1 - p2))
 
@@ -973,15 +1017,15 @@ def euclidean_distance(p1, p2):
 # 메인
 # =========================
 def main():
-    init_db()
+    init_db()       # DB테이블 준비
 
     print("1. 모델 로드 시작")
-    model = YOLO(MODEL_PATH)
+    model = YOLO(MODEL_PATH)    #학습완료된 YOLO 모델 로드
     print("2. 모델 로드 완료")
     print("클래스 목록:", model.names)
 
     ser = None
-    try:
+    try:        # 아두이노 연결 성공하면 ser 객체 생성, 연결 실패 시 프로그램 계속 진행
         ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
         time.sleep(2)
         try:
@@ -994,6 +1038,7 @@ def main():
         print(f"시리얼 연결 실패: {e}")
         print("LED 제어 없이 계속 진행합니다.")
 
+    # USB 웹캠 연결 및 해상도/FPS/buffer설정
     aux_cap = open_aux_camera(AUX_CAM_INDEX)
     if aux_cap is not None and aux_cap.isOpened():
         aux_cap.set(cv2.CAP_PROP_FRAME_WIDTH, AUX_CAM_WIDTH)
@@ -1005,14 +1050,15 @@ def main():
         print(f"추가 카메라 연결 실패: index={AUX_CAM_INDEX}")
         aux_cap = None
 
+    # D435 컬러/깊이 스트림 둘다 킴
     pipeline = rs.pipeline()
     config = rs.config()
     config.enable_stream(rs.stream.color, CAM_WIDTH, CAM_HEIGHT, rs.format.bgr8, 30)
     config.enable_stream(rs.stream.depth, CAM_WIDTH, CAM_HEIGHT, rs.format.z16, 30)
 
-    align = rs.align(rs.stream.color)
+    align = rs.align(rs.stream.color) # 깊이 프레임을 컬러 프레임 기준으로 맞춰주기 위한 객체(안 맞추면 화면의 사람위치와 깊이값 위치가 어긋날 수 있다.)
 
-    try:
+    try:    # D435는 메인카메라 이기 때문에 시작 실패하면 프로그램 종료
         profile = pipeline.start(config)
     except Exception as e:
         print(f"D435 시작 실패: {e}")
@@ -1022,14 +1068,17 @@ def main():
             aux_cap.release()
         return
 
+    # 컬러 카메라 내부 파라미터를 가져온다(이 값이 있어야 픽셀 좌표를 3D 좌표로 바꿀 수 있다.)
     color_stream = profile.get_stream(rs.stream.color)
     intr = color_stream.as_video_stream_profile().get_intrinsics()
 
-    occupied_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, CROSSWALK_ROIS + [SIGNAL_ROI] + ROAD_ROIS)
-    illegal_zone_mask = cv2.bitwise_not(occupied_mask)
-    left_road_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, LEFT_ROAD_ROIS)
-    right_road_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, RIGHT_ROAD_ROIS)
+    #불법주차 / 불법유턴 판단에 사용하는 마스크설정
+    occupied_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, CROSSWALK_ROIS + [SIGNAL_ROI] + ROAD_ROIS) #횡단보도,신호등,도로 등 이미 의미있는 영역 마스크
+    illegal_zone_mask = cv2.bitwise_not(occupied_mask)  #비어있는 구역
+    left_road_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, LEFT_ROAD_ROIS) #왼쪽 차로 전용마스크
+    right_road_mask = build_rect_mask(CAM_WIDTH, CAM_HEIGHT, RIGHT_ROAD_ROIS) #오른쪽 차로 전용마스크
 
+    # 오늘 통계 불러오기 (이전에 저장된 최근 사건 이미지 불러오기) -> 프로그램을 껏다켜도 최근 사건정보가 대시보드에 남는다.
     today_count, last_detect_time = load_today_stats()
     emergency_status = "미감지"
 
@@ -1037,26 +1086,31 @@ def main():
     last_illegal_park_capture = load_latest_event_image("illegal_park")
     last_uturn_capture = load_latest_event_image("illegal_uturn")
 
-    last_capture = None
-    capture_mode = None
+    last_capture = None # 최근 캡처 이미지
+    capture_mode = None # 현재 캡처가 무단횡단이지 주차인지 유턴인지
 
-    show_capture_fullscreen = False
-    show_capture_until = 0
-    display_distance_cm = None
+    show_capture_fullscreen = False      #지금 캡처 전체화면 띄울지
+    show_capture_until = 0               # 캡처화면을 언제까지 보여줄지
+    display_distance_cm = None           # 거리정보 표시용
 
-    show_emergency_fullscreen = False
+    show_emergency_fullscreen = False   # 비상 전체화면 띄울지
 
-    last_jaywalk_count_time = -9999
+    # 중복 저장 쿨다운 시간 관리
+    last_jaywalk_count_time = -9999     
     last_parking_capture_time = -9999
     last_uturn_capture_time = -9999
-    ambulance_emergency_until = 0
+
+    ambulance_emergency_until = 0      # 비상차량 감지 후 언제까지 비상 유지할지
     prev_raw_on_detected = False
 
-    frame_count = 0
-    last_boxes = []
+    frame_count = 0       #몇 프레임 쨰인지
+
+    #추론결과 캐시
+    last_boxes = []        
     last_labels = []
     last_scores = []
 
+    # 직전에 보낸 시리얼 명령 기억
     last_d435_led_cmd = None
     last_aux_signal_cmd = None
 
@@ -1064,6 +1118,8 @@ def main():
     led_hold_until = 0.0
     led_hold_cmd = "NP_N"
 
+
+    #USB 웹캠 관련 상태들
     aux_display_frame = None
     aux_red_masks = []
     aux_extra_masks = []
@@ -1071,12 +1127,13 @@ def main():
     aux_vehicle_boxes = []
     last_aux_person_boxes = []
 
+    # 경광등 최근 감지 시각, 보조 네오픽셀 명령, 보조 신호등 명령
     aux_hold_state = {
         "last_warning_on_time": 0.0,
         "signal_cmd": "TL_NORMAL",
     }
 
-    illegal_park_state = {}
+    illegal_park_state = {} # 차랑별 불법주차 추적 상태 저장용 dict (몇 초 이상 머물렀는지 추척하는데 사용)
 
     cv2.namedWindow("Dashboard", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Dashboard", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -1085,6 +1142,8 @@ def main():
 
     try:
         while True:
+
+            # D435에서 프레임 획득, 깊이 프레임을 컬러 프레임 기준으로 정렬 (D435는 매 프레임마다 컬러 + 깊이가 함께 필요)
             frames = pipeline.wait_for_frames()
             aligned_frames = align.process(frames)
 
@@ -1097,6 +1156,7 @@ def main():
             frame = np.asanyarray(color_frame.get_data())
             display_frame = frame.copy()
 
+            # USB 웹캠도 프레임 읽기 (D435가 메인이고 USB웹캠은 보조)
             aux_frame = None
 
             if aux_cap is not None:
@@ -1113,6 +1173,7 @@ def main():
             signal_roi = SIGNAL_ROI
             fall_valid_rois = road_rois + crosswalk_rois
 
+            # 횡단보도 ROI를 초록색 박스로 화면에 표시
             for cw in crosswalk_rois:
                 cv2.rectangle(display_frame, (cw[0], cw[1]), (cw[2], cw[3]), (0, 255, 0), 2)
 
@@ -1122,17 +1183,21 @@ def main():
             line_pt2 = (rx2, line_y)
             cv2.line(display_frame, line_pt1, line_pt2, (255, 255, 0), 2)
 
+            # 좌우 차로 ROI표시 (불법유턴 판정 영역)
             for rr in LEFT_ROAD_ROIS:
                 cv2.rectangle(display_frame, (rr[0], rr[1]), (rr[2], rr[3]), (255, 255, 0), 1)
 
             for rr in RIGHT_ROAD_ROIS:
                 cv2.rectangle(display_frame, (rr[0], rr[1]), (rr[2], rr[3]), (0, 200, 255), 1)
 
+            # 신호등 ROI를 흰색 박스로 그림
             sx1, sy1, sx2, sy2 = signal_roi
+            # 신호등 영역만 잘라서 빨강/초록 여부 판정 (신호등 색 판정)
             signal_crop = frame[sy1:sy2, sx1:sx2]
             signal_state, signal_red_ratio, signal_green_ratio, signal_red_mask, signal_green_mask = judge_traffic_signal(signal_crop)
-
             signal_color = (0, 0, 255) if signal_state == "RED" else (0, 255, 0) if signal_state == "GREEN" else (200, 200, 200)
+
+            # 현재 신호등 상태와 빨강/초록 비율표시
             cv2.rectangle(display_frame, (sx1, sy1), (sx2, sy2), signal_color, 2)
             cv2.putText(display_frame, f"SIGNAL: {signal_state}", (sx1, max(sy1 - 8, 15)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, signal_color, 2)
@@ -1140,6 +1205,7 @@ def main():
                         (sx1, min(sy2 + 15, h - 5)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, signal_color, 1)
 
+            # YOLO추론 최적화 (모든프레임에서 추론하지 않고 3프레임마다 한번만 추론)
             if frame_count % 3 == 0:
                 results = model.predict(
                     frame,
@@ -1171,11 +1237,13 @@ def main():
                             continue
 
                             label_name = names[int(cls_id)]
+                        # 현재 프레임의 탐지 결과를 last_*캐시에 저장하여 추론안하는 프레임에서는 이전 결과를 재사용하는 구조
                         label_name = names[int(cls_id)]
                         last_boxes.append((x1, y1, x2, y2))
                         last_labels.append(label_name)
                         last_scores.append(float(conf))
 
+                # USB웹캠 추론
                 if aux_frame is not None:
                     aux_results = model.predict(
                         aux_frame,
@@ -1199,6 +1267,7 @@ def main():
             if aux_display_frame is None and aux_frame is not None:
                 aux_display_frame = aux_frame.copy()
 
+            # 사건 판정용 변수 초기화
             emergency_detected = False
             jaywalking_detected = False
             vehicle_intrusion_detected = False
@@ -1215,6 +1284,7 @@ def main():
             line_pixels_cache = None
             line_points_3d_cache = None
 
+            # 내부 보조 함수 횡단보도 기준선 샘플점을 프레임마다 한번만 계산, 이미 계산되어 있으면 계산안함
             def prepare_line_points():
                 nonlocal line_pixels_cache, line_points_3d_cache
                 if line_pixels_cache is not None and line_points_3d_cache is not None:
@@ -1224,6 +1294,7 @@ def main():
                 valid_pixels = []
                 line_points_3d = []
 
+                # 각 기준선 샘플점에 대해 depth 측정, 가능하면 3D 좌표로 변환
                 for lx, ly in line_pixels:
                     d = get_valid_depth_median(depth_frame, lx, ly, patch_size=PATCH_SIZE)
                     if d > 0:
@@ -1231,25 +1302,30 @@ def main():
                         valid_pixels.append((lx, ly))
                         line_points_3d.append(p3d)
 
+                # 계산 결과를 캐시에 저장하고 반환
                 line_pixels_cache = valid_pixels
                 line_points_3d_cache = line_points_3d
 
             current_vehicle_keys = set()
 
+            # D435화면에서 탐지된 객채들을 하나씩 처리
             for i, det_box in enumerate(last_boxes):
                 x1, y1, x2, y2 = det_box
                 label_name = last_labels[i]
                 score = last_scores[i]
                 label_name_lower = label_name.lower()
 
+                # D435화면에서 경광등 후보가 나오면 실제로 빨간불이 켜졌는지 색 분석으로 다시 확인
                 if label_name.upper() in WARNING_CLASSES:
                     roi = frame[y1:y2, x1:x2]
                     final_state, red_ratio, mean_v, _ = judge_warning_light(roi)
                     color = (0, 0, 255) if final_state == "ON" else (255, 0, 0)
 
+                    #ON이면 빨강 박스 + 비상상황 TRUE
                     if final_state == "ON":
                         emergency_detected = True
-
+                    
+                    # YOLO 클래스 명과 색 분석 결과를 같이 표시
                     cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(display_frame, f"{final_state}", (x1, max(y1 - 10, 25)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
@@ -1259,19 +1335,24 @@ def main():
                     cv2.putText(display_frame, f"R={red_ratio:.3f} V={mean_v:.1f}",
                                 (x1, min(y2 + 34, h - 2)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1)
-
+                
+                # 무단횡단 핵심
                 elif label_name_lower in {c.lower() for c in PERSON_CLASSES}:
                     person_road_ratio_max = 0.0
+                    # 사람 박스가 도로 ROI와 얼마나 겹치는지 최대값 계산
                     for road_roi in road_rois:
                         ratio = overlap_ratio(det_box, road_roi)
                         person_road_ratio_max = max(person_road_ratio_max, ratio)
 
                     person_cross_ratio_max = 0.0
+                    # 사람 박스가 횡단보도 ROI와 얼마나 겹치는지 최대값 계산
                     for cw in crosswalk_rois:
                         person_cross_ratio_max = max(person_cross_ratio_max, overlap_ratio(det_box, cw))
 
+                    # 사람이 차량신호 초록불에 횡단보도영역에 1/3 이상 침입, 차량신호 상관없이 횡단보도로 건너지 않고 차도로 건널시 차도 영역에 1/3 침입시 무단횡단
                     is_jaywalking = (person_road_ratio_max >= (1 / 3)) or ((signal_state == "GREEN") and (person_cross_ratio_max >= (1 / 3)))
 
+                    #무단횡단으로 인식되면 빨간 박스
                     if is_jaywalking:
                         jaywalking_detected = True
                         color = (0, 0, 255)
@@ -1282,16 +1363,20 @@ def main():
 
                     cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
 
+                    # 거리 계산
                     if is_jaywalking:
+                        #사람 중심점 계산
                         cx = int((x1 + x2) / 2)
                         cy = int((y1 + y2) / 2)
-                        cv2.circle(display_frame, (cx, cy), 5, (0, 0, 255), -1)
+                        cv2.circle(display_frame, (cx, cy), 5, (0, 0, 255), -1) # 그 중심점에 점 표시
 
-                        person_depth = get_valid_depth_median(depth_frame, cx, cy, patch_size=PATCH_SIZE)
+                        person_depth = get_valid_depth_median(depth_frame, cx, cy, patch_size=PATCH_SIZE) # 사람중심점 깊이 값 구하기
 
+                        
                         if person_depth > 0:
                             prepare_line_points()
-
+                            
+                            # 사람 중심 점을 3D 좌표로 변환
                             if line_points_3d_cache:
                                 person_3d = deproject_to_3d(intr, cx, cy, person_depth)
 
@@ -1300,18 +1385,20 @@ def main():
 
                                 for lpix, l3d in zip(line_pixels_cache, line_points_3d_cache):
                                     dist = euclidean_distance(person_3d, l3d)
+
+                                    # 사람과 기준선 위 샘플 점들 사이 거리중 가장 작은 값 찾기
                                     if dist < min_dist_m:
                                         min_dist_m = dist
                                         closest_line_pixel = lpix
 
-                                dist_cm = min_dist_m * 100.0
+                                dist_cm = min_dist_m * 100.0    # D435 거리값은 meter 단위라서 cm단위로 변환
                                 current_min_dist_cm = dist_cm
 
                                 if closest_line_pixel is not None:
                                     cv2.line(display_frame, (cx, cy), closest_line_pixel, (255, 0, 0), 2)
                                     cv2.circle(display_frame, closest_line_pixel, 5, (255, 0, 255), -1)
 
-                                cv2.putText(display_frame, f"{text} {score:.2f} | dist={dist_cm:.1f}cm",
+                                cv2.putText(display_frame, f"{text} {score:.2f} | dist={dist_cm:.1f}cm",    # 거리값 디스플레이에 출력
                                             (x1, max(y1 - 10, 20)),
                                             cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
                             else:
@@ -1331,19 +1418,24 @@ def main():
                                 (x1, min(y2 + 18, h - 10)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
+                # 차량 클래스
                 elif label_name_lower in {c.lower() for c in VEHICLE_CLASSES}:
-                    left_ratio = overlap_ratio_with_mask(det_box, left_road_mask)
-                    right_ratio = overlap_ratio_with_mask(det_box, right_road_mask)
-                    illegal_zone_ratio = overlap_ratio_with_mask(det_box, illegal_zone_mask)
+                    left_ratio = overlap_ratio_with_mask(det_box, left_road_mask)       #차량이 왼쪽 차로와 얼마나 겹치는지
+                    right_ratio = overlap_ratio_with_mask(det_box, right_road_mask)     #차량이 오른쪽 차로와 얼마나 겹치는지
+                    illegal_zone_ratio = overlap_ratio_with_mask(det_box, illegal_zone_mask)  # 불법 구역과 얼마나 겹치는지
 
                     cross_ratio_max = 0.0
+
+                     #횡단보도 침범 정도 계산
                     for cw in crosswalk_rois:
                         cross_ratio_max = max(cross_ratio_max, overlap_ratio(det_box, cw))
 
+                    # 차량 신호등 빨간불에 횡단보도 ROI 1/3 이상 침범 시 차량 침범
                     intrusion_cond = (signal_state == "RED") and (cross_ratio_max >= (1 / 3))
                     if intrusion_cond:
                         vehicle_intrusion_detected = True
 
+                    # 차량이 왼쪽차로와 오른쪽 차로를 동시에 1/3 영역 침범시 불법 유턴 감지
                     illegal_uturn_cond = (left_ratio >= ROAD_RATIO_THRESHOLD) and (right_ratio >= ROAD_RATIO_THRESHOLD)
                     if illegal_uturn_cond:
                         illegal_uturn_detected = True
@@ -1351,20 +1443,23 @@ def main():
                             best_uturn_score = score
                             best_uturn_box = det_box
 
+                    # 차량 중심점을 20 픽셀 단위격자로 묶어서 간단 추적 key생성, 비슷한 위치에 있는 차를 같은 차량으로 보기 위해서
                     cx = int((x1 + x2) / 2)
                     cy = int((y1 + y2) / 2)
                     vehicle_key = (cx // 20, cy // 20)
                     current_vehicle_keys.add(vehicle_key)
 
+
+                    #불법 주정차 계산
                     if illegal_zone_ratio >= ILLEGAL_ZONE_RATIO_THRESHOLD:
-                        if vehicle_key not in illegal_park_state:
+                        if vehicle_key not in illegal_park_state:   #처음 보는 차량이라면 start_time 기록
                             illegal_park_state[vehicle_key] = {
                                 "start_time": now,
                                 "reported": False
-                            }
-                        else:
+                            }   
+                        else:   # 이미 보던 차량이면 last_seen 갱신
                             parked_time = now - illegal_park_state[vehicle_key]["start_time"]
-                            if parked_time >= ILLEGAL_PARK_SEC:
+                            if parked_time >= ILLEGAL_PARK_SEC: # 불법 주정차 구역에 3초이상 머물렀으면 불법 주차 확정
                                 illegal_park_state[vehicle_key]["reported"] = True
                                 illegal_parking_detected = True
                                 if illegal_zone_ratio > best_illegal_parking_ratio:
@@ -1398,6 +1493,8 @@ def main():
                                 (x1, min(y2 + 18, h - 10)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
+
+                # fall 클래스
                 elif label_name_lower in {c.lower() for c in FALL_CLASSES}:
                     signal_overlap = overlap_ratio(det_box, signal_roi)
 
@@ -1432,6 +1529,8 @@ def main():
                                 (x1, max(y1 - 10, 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
+            
+            # 1초 이상 안보인 차량은 상태 dict에서 제거, 이미 사라진 차가 계속 불법주정차로 남아있을수 있기에 제거
             keys_to_delete = []
             for k, v in illegal_park_state.items():
                 if k not in current_vehicle_keys and now - v["start_time"] > 1.0:
@@ -1441,6 +1540,8 @@ def main():
 
             temp_emergency_for_status = fall_detected or (time.time() < ambulance_emergency_until)
 
+            # 최종 상태 우선순위 결정 1등: 비상/낙상/비상유지시간, 2등 : 무단횡단, 3등:차량침범, 4등:불법유턴, 5등: 불법주차
+            # 이에 따라 LED명령도 전달
             if temp_emergency_for_status:
                 status_text = "EMERGENCY"
                 status_color = (0, 0, 255)
@@ -1486,9 +1587,10 @@ def main():
             cv2.putText(display_frame, f"LED={d435_led_cmd}", (15, 65),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
 
-            last_d435_led_cmd = send_serial_command(ser, d435_led_cmd, last_d435_led_cmd)
-            last_aux_signal_cmd = send_serial_command(ser, aux_hold_state["signal_cmd"], last_aux_signal_cmd)
-            drain_serial_feedback(ser)
+            # 시리얼 명령 전송
+            last_d435_led_cmd = send_serial_command(ser, d435_led_cmd, last_d435_led_cmd) # 메인 상태를 D435용 LED명령으로 전송
+            last_aux_signal_cmd = send_serial_command(ser, aux_hold_state["signal_cmd"], last_aux_signal_cmd)   # USB웹캠 쪽 네오픽셀 명령 전송, 신호등전체점등/정상복귀 명령 전송
+            drain_serial_feedback(ser)  
 
             key = cv2.waitKey(1) & 0xFF
 
@@ -1503,9 +1605,11 @@ def main():
 
             now = time.time()
 
+            # 비상 유지 로직
             raw_on_detected = emergency_detected
             raw_fall_detected = fall_detected
-
+            
+            # 경광등이 새로 켜진(ON처음 감지)에만 15초타이머 시작 (계속 켜져있는동안 무한으로 늘어나지 않도록)
             if raw_on_detected and (not prev_raw_on_detected):
                 ambulance_emergency_until = now + AMBULANCE_EMERGENCY_DURATION
                 last_detect_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1525,11 +1629,13 @@ def main():
             if show_capture_fullscreen and now >= show_capture_until:
                 show_capture_fullscreen = False
 
+            # 무단횡단자 캡처 (지금 비상상태가 아니면서, 무단횡단이 감지되었을때, 마지막 무단횡단 감지 이후 10초가 지났을것->중복저장 막기)
             if (not emergency_now) and jaywalking_detected and aux_frame is not None:
                 if now - last_jaywalk_count_time >= JAYWALK_COUNT_COOLDOWN:
                     boxes_for_crop = aux_person_boxes if len(aux_person_boxes) > 0 else last_aux_person_boxes
                     aux_crop = crop_best_aux_person(aux_frame, boxes_for_crop, margin=20)
 
+                    # 가능하면 USB웹캠에서 사람위주 크롭저장, 실패하면 D435전체화면 저장
                     if aux_crop is not None:
                         capture_img = aux_crop
                         print("[추가 웹캠] person crop 저장")
@@ -1548,14 +1654,17 @@ def main():
                     show_capture_fullscreen = True
                     show_capture_until = now + CAPTURE_DISPLAY_DURATION
 
+                    # 사건 기반 파일명 생성 (무단횡단 폴더에 이미지 저장)
                     filename = os.path.join(JAYWALK_DIR, f"jaywalk_{int(now)}.jpg")
                     cv2.imwrite(filename, capture_img)
                     print(f"[무단횡단자 캡처 저장 - 추가 웹캠] {filename}")
 
+                    #DB 로그에 저장, 오늘통계증가
                     save_event("jaywalk", filename)
                     update_jaywalk_daily_stats()
                     today_count, last_detect_time = load_today_stats()
 
+            # 불법 주정차 저장 (D435화면에서 크롭 저장), 사건로그 저장
             if (not emergency_now) and illegal_parking_detected and best_illegal_parking_box is not None:
                 if now - last_parking_capture_time >= PARKING_CAPTURE_COOLDOWN:
                     capture_img = crop_box_with_margin(frame, best_illegal_parking_box, margin=25)
@@ -1579,6 +1688,7 @@ def main():
 
                     save_event("illegal_park", filename)
 
+            #불법 유턴 저장 (D435화면에서 크롭 저장), 사건로그 저장
             if (not emergency_now) and illegal_uturn_detected and best_uturn_box is not None:
                 if now - last_uturn_capture_time >= UTURN_CAPTURE_COOLDOWN:
                     capture_img = crop_box_with_margin(frame, best_uturn_box, margin=25)
@@ -1607,8 +1717,11 @@ def main():
 
             prev_raw_on_detected = raw_on_detected
 
+            #화면 모드 비상이면 무조건 비상전체화면 우선
             if show_emergency_fullscreen:
                 screen = make_emergency_fullscreen(display_frame)
+
+            # 비상이 아니고 캡처화면 표시 중이면 시간이 다됐으면 다시 대시보드 복귀, 아직 시간이 남았으면 사건별 제목으로 전체화면 표시
             elif show_capture_fullscreen and last_capture is not None:
                 if capture_mode == "jaywalk":
                     screen = make_capture_fullscreen(
@@ -1634,6 +1747,7 @@ def main():
                         title_text="캡처 화면",
                         distance_cm=None
                     )
+            #아무 이벤트 발생이 아니라면 기본 대시보드 표시
             else:
                 screen = make_dashboard(
                     last_jaywalk_capture,
@@ -1643,7 +1757,7 @@ def main():
                     display_frame,
                 )
 
-            cv2.imshow("Dashboard", screen)
+            cv2.imshow("Dashboard", screen) #최종 선택된 화면 출력
 
             if signal_red_mask is not None:
                 cv2.imshow("D435 Signal Red Mask", signal_red_mask)
@@ -1662,7 +1776,7 @@ def main():
                 break
 
     finally:
-        if ser:
+        if ser:         #종료할 때 아두이노를 원상태로 복귀
             try:
                 ser.write(b"NP_N\n")
                 ser.write(b"TL_NORMAL\n")
@@ -1671,10 +1785,10 @@ def main():
             except Exception:
                 pass
 
-        if aux_cap:
+        if aux_cap: # USB 웹캠 해제
             aux_cap.release()
 
-        pipeline.stop()
+        pipeline.stop() #D435 파이프라인 종료
         cv2.destroyAllWindows()
         print("종료 완료")
 
