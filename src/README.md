@@ -354,31 +354,65 @@ def judge_traffic_signal(roi):
 
 - **핵심 코드**
 
- ```python
- # =========================
-# 시스템 초기화
+```python
+# =========================
+# 차량 침범 이벤트 판정
 # =========================
 
-# DB 초기화
-init_db()
+# 차량 클래스
+                elif label_name_lower in {c.lower() for c in VEHICLE_CLASSES}:
+                    left_ratio = overlap_ratio_with_mask(det_box, left_road_mask)       #차량이 왼쪽 차로와 얼마나 겹치는지
+                    right_ratio = overlap_ratio_with_mask(det_box, right_road_mask)     #차량이 오른쪽 차로와 얼마나 겹치는지
+                    illegal_zone_ratio = overlap_ratio_with_mask(det_box, illegal_zone_mask)  # 불법 구역과 얼마나 겹치는지
 
-# YOLO 모델 로드
-model = YOLO(MODEL_PATH)
+                    cross_ratio_max = 0.0
 
-# 아두이노 시리얼 연결
-ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+                     #횡단보도 침범 정도 계산
+                    for cw in crosswalk_rois:
+                        cross_ratio_max = max(cross_ratio_max, overlap_ratio(det_box, cw))
 
-# 보조 카메라 초기화 (USB 웹캠)
-aux_cap = open_aux_camera(AUX_CAM_INDEX)
+                    # 차량 신호등 빨간불에 횡단보도 ROI 1/3 이상 침범 시 차량 침범
+                    intrusion_cond = (signal_state == "RED") and (cross_ratio_max >= (1 / 3))
+                    if intrusion_cond:
+                        vehicle_intrusion_detected = True
+    illegal_zone_ratio = 0.0
+    for roi in CROSSWALK_ROIS:
+        illegal_zone_ratio = max(illegal_zone_ratio, overlap_ratio(vehicle_box, roi))
 
-# RealSense D435 초기화
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+# =========================
+# 차량 불법 유턴 이벤트 판정
+# =========================
+   # 차량이 왼쪽차로와 오른쪽 차로를 동시에 1/3 영역 침범시 불법 유턴 감지
+                    illegal_uturn_cond = (left_ratio >= ROAD_RATIO_THRESHOLD) and (right_ratio >= ROAD_RATIO_THRESHOLD)
+                    if illegal_uturn_cond:
+                        illegal_uturn_detected = True
+                        if score > best_uturn_score:
+                            best_uturn_score = score
+                            best_uturn_box = det_box
+# =========================
+# 차량 불법 주정차 이벤트 판정
+# =========================
+                   #불법 주정차 계산
+                    if illegal_zone_ratio >= ILLEGAL_ZONE_RATIO_THRESHOLD:
+                        if vehicle_key not in illegal_park_state:   #처음 보는 차량이라면 start_time 기록
+                            illegal_park_state[vehicle_key] = {
+                                "start_time": now,
+                                "reported": False
+                            }   
+                        else:   # 이미 보던 차량이면 last_seen 갱신
+                            parked_time = now - illegal_park_state[vehicle_key]["start_time"]
+                            if parked_time >= ILLEGAL_PARK_SEC: # 불법 주정차 구역에 3초이상 머물렀으면 불법 주차 확정
+                                illegal_park_state[vehicle_key]["reported"] = True
+                                illegal_parking_detected = True
+                                if illegal_zone_ratio > best_illegal_parking_ratio:
+                                    best_illegal_parking_ratio = illegal_zone_ratio
+                                    best_illegal_parking_box = det_box
 ```
 - **설명**
-  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
+  - 차량 객체가 차량신호 빨간불일 경우에 횡단보도 ROI와의 겹침비율을 계산하였다.
+  - 차량 객체가 검출되면 좌측 차로, 우측 차로 ROI와의 겹침 비율을 각각 계산하였다.
+  - 이를 기반으로 차량 침범, 불법 유턴, 불법주차를 구분하여 판정하도록 구현하였다.
+  - 특히 불법주차는 특정 구역에 일정 시간 이상 머무는 경우로 정의하여 단순 위치 검출을 넘어 시간 기반 이벤트 판단이 가능하도록 설계하였다.
 
 
 ---
