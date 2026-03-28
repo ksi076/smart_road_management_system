@@ -262,86 +262,175 @@ def judge_traffic_signal(roi):
 
 ### 5️⃣ 무단횡단 판정 로직
 
-- **무시 영역 설정:**
-  ○ ignore_zone 함수로 특정 영역 사람 감지 제외  
+- **핵심 코드**
 
-- **중복 방지:**
-  ○ duplicate_limit으로 일정 시간 내 중복 카운트 방지  
+```python
+# =========================
+# 무단횡단 판정 로직
+# =========================
 
-- **비상 모드:**
-  ○ emergency_mode 실행 시 15초 유지  
-  ○ 'J' 키 입력 시 해제  
+# 무단횡단 핵심
+                elif label_name_lower in {c.lower() for c in PERSON_CLASSES}:
+                    person_road_ratio_max = 0.0
+                    # 사람 박스가 도로 ROI와 얼마나 겹치는지 최대값 계산
+                    for road_roi in road_rois:
+                        ratio = overlap_ratio(det_box, road_roi)
+                        person_road_ratio_max = max(person_road_ratio_max, ratio)
 
-- **오류 처리:**
-  ○ 카메라 오류 및 파일 저장 오류 대응
+                    person_cross_ratio_max = 0.0
+                    # 사람 박스가 횡단보도 ROI와 얼마나 겹치는지 최대값 계산
+                    for cw in crosswalk_rois:
+                        person_cross_ratio_max = max(person_cross_ratio_max, overlap_ratio(det_box, cw))
 
+                    # 사람이 차량신호 초록불에 횡단보도영역에 1/3 이상 침입, 차량신호 상관없이 횡단보도로 건너지 않고 차도로 건널시 차도 영역에 1/3 침입시 무단횡단
+                    is_jaywalking = (person_road_ratio_max >= (1 / 3)) or ((signal_state == "GREEN") and (person_cross_ratio_max >= (1 / 3)))
 
+                    #무단횡단으로 인식되면 빨간 박스
+                    if is_jaywalking:
+                        jaywalking_detected = True
+                        color = (0, 0, 255)
+                        text = f"{label_name} JAYWALK"
+                    else:
+                        color = (0, 255, 255)
+                        text = f"{label_name}"
+
+                    cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
+```
+- **설명**
+  - 사람 객체가 치량 신호 초록불에 횡단보도에 검출되면 횡단보도 ROI와의 겹침 비율을  계산하였고 신호와 상관없이 횡단보도가 아닌 도로에 침범시 도로 ROI와의 겹침비율을 계산하였다.
+  - 이후 겹침 비율이 기준값 이상인 경우를 무단횡단 상황으로 판정하도록 구현하였다.
+  - 이를 통해 단순히 사람을 검출하는 것이 아니라, 객체의 위치 정보를 바탕으로 실제 도로 위반 상황을 해석하도록 설계하였다.
 ---
 
 ### 6️⃣ D435 기반 거리 측정
 
-- **화면 출력:**
-  ○ draw_box 함수로 bbox 및 라벨 표시  
+- **핵심 코드**
 
-- **이미지 저장:**
-  ○ save_image 함수로 이벤트 이미지 저장  
+ ```python
+ # =========================
+# 시스템 초기화
+# =========================
 
-- **DB 저장:**
-  ○ save_db 함수로 로그 기록  
-    ■ 시간 (detected_at)  
-    ■ 이벤트 종류 (event_type)  
-    ■ 이미지 경로 (image_path)  
+# DB 초기화
+init_db()
+
+# YOLO 모델 로드
+model = YOLO(MODEL_PATH)
+
+# 아두이노 시리얼 연결
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+
+# 보조 카메라 초기화 (USB 웹캠)
+aux_cap = open_aux_camera(AUX_CAM_INDEX)
+
+# RealSense D435 초기화
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+```
+- **설명**
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 
 ---
 
 
 ### 7️⃣ 차량 이벤트 판정 로직
 
-- **화면 출력:**
-  ○ draw_box 함수로 bbox 및 라벨 표시  
+- **핵심 코드**
 
-- **이미지 저장:**
-  ○ save_image 함수로 이벤트 이미지 저장  
+ ```python
+ # =========================
+# 시스템 초기화
+# =========================
 
-- **DB 저장:**
-  ○ save_db 함수로 로그 기록  
-    ■ 시간 (detected_at)  
-    ■ 이벤트 종류 (event_type)  
-    ■ 이미지 경로 (image_path)  
+# DB 초기화
+init_db()
+
+# YOLO 모델 로드
+model = YOLO(MODEL_PATH)
+
+# 아두이노 시리얼 연결
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+
+# 보조 카메라 초기화 (USB 웹캠)
+aux_cap = open_aux_camera(AUX_CAM_INDEX)
+
+# RealSense D435 초기화
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+```
+- **설명**
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
+
 
 ---
 
 
 ### 8️⃣ fall 감지 및 비상상황 판정 로직
 
-- **화면 출력:**
-  ○ draw_box 함수로 bbox 및 라벨 표시  
+- **핵심 코드**
 
-- **이미지 저장:**
-  ○ save_image 함수로 이벤트 이미지 저장  
+ ```python
+ # =========================
+# 시스템 초기화
+# =========================
 
-- **DB 저장:**
-  ○ save_db 함수로 로그 기록  
-    ■ 시간 (detected_at)  
-    ■ 이벤트 종류 (event_type)  
-    ■ 이미지 경로 (image_path)  
+# DB 초기화
+init_db()
+
+# YOLO 모델 로드
+model = YOLO(MODEL_PATH)
+
+# 아두이노 시리얼 연결
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+
+# 보조 카메라 초기화 (USB 웹캠)
+aux_cap = open_aux_camera(AUX_CAM_INDEX)
+
+# RealSense D435 초기화
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+```
+- **설명**
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 
 ---
 
 
 ### 9️⃣ 대시보드 및 Arduino 연동
 
-- **화면 출력:**
-  ○ draw_box 함수로 bbox 및 라벨 표시  
+- **핵심 코드**
 
-- **이미지 저장:**
-  ○ save_image 함수로 이벤트 이미지 저장  
+ ```python
+ # =========================
+# 시스템 초기화
+# =========================
 
-- **DB 저장:**
-  ○ save_db 함수로 로그 기록  
-    ■ 시간 (detected_at)  
-    ■ 이벤트 종류 (event_type)  
-    ■ 이미지 경로 (image_path)  
+# DB 초기화
+init_db()
+
+# YOLO 모델 로드
+model = YOLO(MODEL_PATH)
+
+# 아두이노 시리얼 연결
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+
+# 보조 카메라 초기화 (USB 웹캠)
+aux_cap = open_aux_camera(AUX_CAM_INDEX)
+
+# RealSense D435 초기화
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+```
+- **설명**
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 
 ---
   
