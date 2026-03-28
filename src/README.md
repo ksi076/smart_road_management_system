@@ -418,68 +418,92 @@ def judge_traffic_signal(roi):
 ---
 
 
-### 8️⃣ fall 감지 및 비상상황 판정 로직
+### 8️⃣ fall 감지 및 비상상황 유지 로직
 
 - **핵심 코드**
 
- ```python
- # =========================
-# 시스템 초기화
+```python
+# =========================
+# 낙상 감지
 # =========================
 
-# DB 초기화
-init_db()
+# fall 클래스
+                elif label_name_lower in {c.lower() for c in FALL_CLASSES}:
+                    signal_overlap = overlap_ratio(det_box, signal_roi)
 
-# YOLO 모델 로드
-model = YOLO(MODEL_PATH)
+                    fall_roi_overlap_max = 0.0
+                    for roi in fall_valid_rois:
+                        fall_roi_overlap_max = max(fall_roi_overlap_max, overlap_ratio(det_box, roi))
 
-# 아두이노 시리얼 연결
-ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+                    is_valid_fall = (signal_overlap < 0.30) and (fall_roi_overlap_max >= FALL_VALID_RATIO_THRESHOLD)
 
-# 보조 카메라 초기화 (USB 웹캠)
-aux_cap = open_aux_camera(AUX_CAM_INDEX)
+                    if is_valid_fall:
+                        fall_detected = True
+                        cv2.rectangle(display_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
+                        cv2.putText(display_frame, f"{label_name} {score:.2f}",
+                                    (x1, max(y1 - 10, 20)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
+                        cv2.putText(display_frame, f"fall_roi={fall_roi_overlap_max:.2f}",
+                                    (x1, min(y2 + 18, h - 10)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 255), 1)
+                    else:
+                        cv2.rectangle(display_frame, (x1, y1), (x2, y2), (120, 120, 120), 1)
+                        cv2.putText(display_frame, f"IGNORE {label_name} {score:.2f}",
+                                    (x1, max(y1 - 10, 20)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+                        cv2.putText(display_frame, f"fall_roi={fall_roi_overlap_max:.2f}",
+                                    (x1, min(y2 + 18, h - 10)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 180, 180), 1)
 
-# RealSense D435 초기화
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+                else:
+                    color = (0, 255, 255)
+                    cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(display_frame, f"{label_name} {score:.2f}",
+                                (x1, max(y1 - 10, 20)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+# =========================
+# 비상상황 유지
+# =========================
+            raw_on_detected = emergency_detected
+            raw_fall_detected = fall_detected
+            
+            # 경광등이 새로 켜진(ON처음 감지)에만 15초타이머 시작 (계속 켜져있는동안 무한으로 늘어나지 않도록)
+            if raw_on_detected and (not prev_raw_on_detected):
+                ambulance_emergency_until = now + AMBULANCE_EMERGENCY_DURATION
+                last_detect_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            fall_emergency_active = raw_fall_detected
+            ambulance_emergency_active = (now < ambulance_emergency_until)
+            emergency_now = fall_emergency_active or ambulance_emergency_active
+
+            if emergency_now:
+                emergency_status = "감지"
+                show_emergency_fullscreen = True
+                show_capture_fullscreen = False
+            else:
+                emergency_status = "미감지"
+                show_emergency_fullscreen = False
+
+            if show_capture_fullscreen and now >= show_capture_until:
+                show_capture_fullscreen = False
+# =========================
+# 경광등 ON 판정시 차량신호 3개 모두 점등
+# =========================
+warning_override_active = (now - hold_state["last_warning_on_time"]) <= WARNING_HOLD_SECONDS # 방금 ON이 아니더라도 마지막 ON시간으로부터 3초 이내면 비상상태 유지
+    hold_state["signal_cmd"] = "TL_ALL" if warning_override_active else "TL_NORMAL" #경광등 유지 중이면 TL_ALL, 아니면 TL_NORMAL
+
+    status_text = "USB EMERGENCY LIGHT ON" if emergency_detected_now else "USB NORMAL"
+    status_color = (0, 0, 255) if emergency_detected_now else (0, 255, 0)
+    cv2.putText(out, status_text, (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
+
 ```
 - **설명**
-  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
+  - fall 클래스가 검출될 경우와 경광등 ON을 감지할 경우 비상상황으로 판정한다.
+  - 경광등 ON 감지 시 비상상황 전환 및 차량신호 3개를 모두 점등하여 비상상황임을 인지시킬 수 있게 한다.
 
 ---
 
 
-### 9️⃣ 대시보드 및 Arduino 연동
 
-- **핵심 코드**
-
- ```python
- # =========================
-# 시스템 초기화
-# =========================
-
-# DB 초기화
-init_db()
-
-# YOLO 모델 로드
-model = YOLO(MODEL_PATH)
-
-# 아두이노 시리얼 연결
-ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
-
-# 보조 카메라 초기화 (USB 웹캠)
-aux_cap = open_aux_camera(AUX_CAM_INDEX)
-
-# RealSense D435 초기화
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-```
-- **설명**
-  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
-
----
   
