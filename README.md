@@ -149,9 +149,11 @@
  <img src="./gif/reality/횡단보도_무단횡단.gif" width="250" height="340" align="top">
 </div>
 
-#### ● 차량신호등 빨간불에 사람객체가 횡단보도 ROI에 0.3 이상 침범 시 무단횡단 판정
-#### ● 이후 디스플레이에 크롭하여 출력 및 야간엔 네오 픽셀 빨강 LED 점등
-
+#### ● 차량신호등 빨간불에 사람객체가 횡단보도 ROI에 0.3 이상 침범 시 무단횡단 판단
+#### ● 이후 USB 보조웹캠으로 무단횡단자를 크롭하여 디스플레이에 출력
+#### ● 야간엔 네오 픽셀 빨강 LED 점등
+#### ● DB에 이미지 및 시간정보 로그 저장
+#### ● D435 카메라를 사용하여 횡단보도 중앙 기준선과 사람까지의 거리정보 출력
 
 ### [차도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/10VPleeBBzlbaidgrZ4XxjRO3DYnDbJa4/view?usp=sharing)
 
@@ -160,6 +162,11 @@
  <img src="./gif/reality/차도무단횡단.gif" width="250" height="340" align="top">
 </div>
 
+#### ● 신호와 상관없이 사람객체가 횡단보도로 건너지 않고 차도로 건널 시 도로 ROI에 0.3 이상 침범 시 무단횡단 판단
+#### ● 이후 USB 보조웹캠으로 무단횡단자를 크롭하여 디스플레이에 출력
+#### ● 야간엔 네오 픽셀 빨강 LED 점등
+#### ● DB에 이미지 및 시간정보 로그 저장
+#### ● D435 카메라를 사용하여 횡단보도 중앙 기준선과 사람까지의 거리정보 출력
 
 ### [불법 주정차 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1wICn6sA5SGs-cMUMmPEFmAYt1xEubBA2/view?usp=sharing)
 
@@ -168,12 +175,20 @@
  <img src="./gif/reality/불법주정차.gif" width="250" height="340" align="top">
 </div>
 
+#### ● 차량이 불법 주정차 구역 ROI에 3초이상 침범 시 불법 주정차 판단
+#### ● D435카메라로 불법주정차 차량을 크롭하여 디스플레이에 출력
+#### ● DB에 이미지 및 시간정보 로그 저장
+
 ### [불법 유턴 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1-yff9gF1twIYAe5XEUdBGuQiPEu5qhGJ/view?usp=sharing)
 
 <div>
  <img src="./gif/display/불법유턴1.gif" width="580" height="500" align="top">
  <img src="./gif/reality/불법유턴압축.gif" width="250" height="340" align="top">
 </div>
+
+#### ● 차량이 양쪽 도로 구역 ROI에 0.3이상 씩 침범 시 불법유턴 판단
+#### ● D435카메라로 불법유턴 차량을 크롭하여 디스플레이에 출력
+#### ● DB에 이미지 및 시간정보 로그 저장
 
 ### [차량 횡단보도 침범 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1e-4tieU3bb9hKjmdHmfrGHj2JFM-pdN3/view?usp=sharing)
 
@@ -182,6 +197,9 @@
  <img src="./gif/reality/차량횡단보도침범압축.gif" width="250" height="340" align="top">
 </div>
 
+#### ● 차량이 차량 신호 빨간불에 횡단보도 구역 0.3이상 침범 시 차량 횡단보도 침범 판단
+#### ● 야간엔 네오 픽셀 파랑 LED 점등
+
 ### [긴급상황 사고 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/11_sgPJO63pYdR7drzoCO-xOwAlElfMGV/view?usp=sharing)
 
 <div>
@@ -189,12 +207,19 @@
  <img src="./gif/reality/긴급상황사고압축.gif" width="250" height="340" align="top">
 </div>
 
+#### ● fall클래스 감지 시 긴급상황 사고 판정
+#### ● 디스플레이에 비상상황 디스플레이 출력
+
 ### [긴급 차 비켜주기 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1XEe5XvLOEKhPmtaGWWo1Pxdk5H6INKlp/view?usp=sharing)
 
 <div>
  <img src="./gif/display/긴급차비켜주기.gif" width="580" height="500" align="top">
  <img src="./gif/reality/긴급차비켜주기실물.gif" width="250" height="340" align="top">
 </div>
+
+#### ● 경광등 ON 클래스 감지 시 긴급상황 판정
+#### ● 디스플레이에 비상상황 디스플레이 출력
+#### ● 차량신호 빨간불,초록불,노란불 모두 점등하여 비상상황임을 알림
 
 ---
 
