@@ -81,19 +81,81 @@ SIGNAL_ROI = (568, 111, 628, 133)
 
 ### 3️⃣ SQLite 기반 이벤트 저장 구조
 
-- **객체 탐지:**
-  ○ predict 함수로 YOLO 추론 수행  
-  ○ 사람(person), 차량(car, bus, truck) 인식  
+```python
+# =========================
+# SQLite 기반 이벤트 저장 구조
+# =========================
 
-- **무단 횡단 감지:**
-  ○ check_jaywalk 함수로 제한 구역 내 사람 확인  
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-- **불법 주정차 감지:**
-  ○ check_illegal_parking 함수로 일정 시간 정지 차량 판단  
+    # 이벤트 로그 테이블 생성
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS event_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            detected_at TEXT NOT NULL,
+            image_path TEXT
+        )
+    """)
 
-- **불법 유턴 감지:**
-  ○ check_illegal_uturn 함수로 이동 방향 변화 분석  
+    # 일별 무단횡단 통계 테이블 생성
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS daily_stats (
+            stat_date TEXT PRIMARY KEY,
+            jaywalk_count INTEGER NOT NULL DEFAULT 0,
+            last_detect_time TEXT
+        )
+    """)
 
+    conn.commit()
+    conn.close()
+
+
+def save_event(event_type, detected_at, image_path=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO event_logs (event_type, detected_at, image_path)
+        VALUES (?, ?, ?)
+    """, (event_type, detected_at, image_path))
+
+    conn.commit()
+    conn.close()
+
+
+def update_jaywalk_daily_stats(detected_at):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # 날짜 추출 (YYYY-MM-DD)
+    date = detected_at[:10]
+
+    cursor.execute("""
+        SELECT jaywalk_count FROM daily_stats WHERE stat_date = ?
+    """, (date,))
+    row = cursor.fetchone()
+
+    if row:
+        # 기존 데이터 있으면 count 증가
+        cursor.execute("""
+            UPDATE daily_stats
+            SET jaywalk_count = jaywalk_count + 1,
+                last_detect_time = ?
+            WHERE stat_date = ?
+        """, (detected_at, date))
+    else:
+        # 없으면 새로 생성
+        cursor.execute("""
+            INSERT INTO daily_stats (stat_date, jaywalk_count, last_detect_time)
+            VALUES (?, 1, ?)
+        """, (date, detected_at))
+
+    conn.commit()
+    conn.close()
+```
 ---
 
 ### 4️⃣ OpenCV 기반 신호등/경광등 상태 판별
