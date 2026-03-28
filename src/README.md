@@ -4,12 +4,35 @@
 
 ### 1️⃣ 시스템 초기화 및 통합 제어 구조
 
-- **load_model, init_camera, init_db, create_directory**
-  ○ YOLO 모델, 카메라, DB, 저장 폴더 초기화.
+- **역할**
+  - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
+- **핵심 코드**
+ ---python
+ # =========================
+# 시스템 초기화
+# =========================
 
-- **초기 상태:**
-  ○ 카메라 ON 상태  
-  ○ 시스템 대기 상태  
+# DB 초기화
+init_db()
+
+# YOLO 모델 로드
+model = YOLO(MODEL_PATH)
+
+# 아두이노 시리얼 연결
+ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1)
+
+# 보조 카메라 초기화 (USB 웹캠)
+aux_cap = open_aux_camera(AUX_CAM_INDEX)
+
+# RealSense D435 초기화
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+---
+- **설명**
+  - 객체 탐지, 거리 측정, 이벤트 저장, 하드웨어 제어를 하나의 프로그램으로 통합하여 스마트 도로 관제 시스템 구조를 구성하였다.
+
 
 ---
 
