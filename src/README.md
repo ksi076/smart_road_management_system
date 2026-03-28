@@ -37,7 +37,7 @@ config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
 ---
 
-### 2️⃣ ROI 기반 도로 영역 설정
+### 2️⃣ ROI 기반 영역 설정
 
 - **카메라 프레임 입력:**
   ○ read_frame 함수로 실시간 영상 획득
