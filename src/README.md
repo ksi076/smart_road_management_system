@@ -7,7 +7,8 @@
 - **역할**
   - YOLO ONNX 모델, Intel RealSense D435, USB 웹캠, SQLite DB, Arduino 시리얼 통신을 초기화한다.
 - **핵심 코드**
- ---python
+
+ ```python
  # =========================
 # 시스템 초기화
 # =========================
@@ -29,7 +30,7 @@ pipeline = rs.pipeline()
 config = rs.config()
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
----
+```
 - **설명**
   - 객체 탐지, 거리 측정, 이벤트 저장, 하드웨어 제어를 하나의 프로그램으로 통합하여 스마트 도로 관제 시스템 구조를 구성하였다.
 
