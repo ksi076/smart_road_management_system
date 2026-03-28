@@ -20,6 +20,8 @@ cursor.execute("""
 # =========================
 # 2. daily_stats 테이블 없으면 생성
 # =========================
+
+#날짜별 통계용 테이블 (날짜, 무단횡단횟수, 마지막 감지시간)
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS daily_stats (
         stat_date TEXT PRIMARY KEY,
@@ -29,7 +31,7 @@ cursor.execute("""
 """)
 
 # =========================
-# 3. event_date 컬럼 존재 여부 확인
+# 3. event_date 컬럼 존재 여부 확인 없으면 추가
 # =========================
 cursor.execute("PRAGMA table_info(event_logs)")
 columns = [row[1] for row in cursor.fetchall()]
@@ -49,19 +51,23 @@ cursor.execute("""
     WHERE event_date IS NULL OR event_date = ''
 """)
 
-conn.commit()
+# detected 안에 날짜와 시간이 같이 들어있는데, 매번 앞에 10글자만 잘라서 비교하면 불편하기 떄문에 날짜 부분만 따로 저장하는 event_data 컬럼 추가
+
+conn.commit() #sqlite는 수정 작업 후 commit을 안하면 실제 저장X
 
 # =========================
 # 5. 조회 날짜 입력
 # 엔터면 오늘 날짜
 # =========================
 input_date = input("조회할 날짜를 입력하세요 (YYYY-MM-DD, 엔터=오늘): ").strip()
+#사용자에게 입력받음
 
 if input_date == "":
     cursor.execute("SELECT date('now', 'localtime')")
     selected_date = cursor.fetchone()[0]
 else:
     selected_date = input_date
+# 날짜를 안넣으면 오늘 날짜 사용
 
 # =========================
 # 6. 조회 이벤트 종류 입력
@@ -74,6 +80,7 @@ print("4. all            (전체)")
 
 event_input = input("번호 또는 이름 입력: ").strip().lower()
 
+#입력값을 실제 이벤트 이름으로 바꿔주는 딕셔너리
 event_map = {
     "1": "jaywalk",
     "2": "illegal_park",
@@ -85,7 +92,8 @@ event_map = {
     "all": "all"
 }
 
-selected_event = event_map.get(event_input, "all")
+selected_event = event_map.get(event_input, "all") # 없으면 기본값 all
+#잘못 입력해도 프로그램이 죽지 않고 전체 조회로 넘어감
 
 print("\n" + "=" * 80)
 print(f"📅 조회 날짜: {selected_date}")
@@ -106,10 +114,13 @@ row = cursor.fetchone()
 selected_count = row[0] if row else 0
 print(f"🔥 {selected_date} 무단횡단자 수(daily_stats 기준): {selected_count}")
 print("=" * 80)
+# 요약본으로 빠르게 통계 보여주기 좋다.(무단횡단 횟수 집계용)
 
 # =========================
 # 8. 조건에 맞는 로그 조회
 # =========================
+
+# 전체 조회일 경우, 해당 날짜의 모든 eventdata를 가져온다.
 if selected_event == "all":
     cursor.execute("""
         SELECT id, event_type, detected_at, event_date, image_path
@@ -117,6 +128,8 @@ if selected_event == "all":
         WHERE event_date = ?
         ORDER BY id DESC
     """, (selected_date,))
+
+# 특정 이벤트 조회시, 날짜 + 이벤트 종류 둘다 일치하는 data만 가져온다.
 else:
     cursor.execute("""
         SELECT id, event_type, detected_at, event_date, image_path
@@ -141,6 +154,8 @@ print("=" * 80)
 # =========================
 # 9. event_logs 기준 개수 출력
 # =========================
+
+# 이벤트 종류별로 몇 건이 있는지 묶어서 계산(선택한 날짜에 대해)
 if selected_event == "all":
     cursor.execute("""
         SELECT event_type, COUNT(*)
