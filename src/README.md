@@ -1,6 +1,6 @@
 ## 📄 best.onnx파일
 
-### [best.onnx](https://your-link.com/best.onnx](https://drive.google.com/file/d/1uawiLiPnFgE_XmMgUQVAdI_l8eMrahd5/view?usp=drive_link)
+### [best.onnx](https://drive.google.com/file/d/1uawiLiPnFgE_XmMgUQVAdI_l8eMrahd5/view?usp=drive_link)
 
 
 ---
