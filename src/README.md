@@ -5,7 +5,7 @@
 ### [best.onnx](https://drive.google.com/file/d/1uawiLiPnFgE_XmMgUQVAdI_l8eMrahd5/view?usp=drive_link)
 
 
-## 📦 Model Info
+### 📦 Model Info
 
 - Format: ONNX
 - Model: YOLOv8s
@@ -15,7 +15,7 @@
 - Parameters: 11M
 - Task: Object Detection
 
-## 🎯 Classes
+### 🎯 Classes
 - vehicle
 - person
 - fall
@@ -25,7 +25,7 @@
 - personnight
 - fallnight
   
-## ⚡ 특징
+### ⚡ 특징
 - Raspberry Pi 환경에 최적화된 경량 모델
 - 실시간 객체 탐지 가능
 - YOLOv8s 기반 커스텀 학습 모델
