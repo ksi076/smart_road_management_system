@@ -12,7 +12,6 @@
 - Input Size: 320 x 320
 - Channels: 3 (RGB)
 - Batch Size: 1
-- Parameters: 11M
 - Task: Object Detection
 
 ### 🎯 Classes
