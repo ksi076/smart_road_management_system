@@ -223,7 +223,7 @@
 
 ---
 
-##  💻  디스플레이 및 야간 LED 사진
+##  💻  디스플레이 및 야간 네오픽셀 LED 사진
 <div>
   <img src="img/라즈베리파일 디스플레이.jpg" height="400">
   <img src="img/무단횡단야간.png" style="width:250px; height:400px">
