@@ -295,3 +295,51 @@
   ex) 낙하물 및 장애물, 쓰레기, 타이머, 동물 등
 - 자율주행 및 스마트차량
   ex) V2X(vehicle to Everything)통신 연동
+
+---
+
+  ## 👥 팀원 소개
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/ksi076">
+        <img src="https://github.com/kkyle9104.png" width="120px;" alt=""/>
+        <br />
+        <sub><b>kkyle9104</b></sub>
+      </a>
+      <br />
+      Kim Byunghyun
+    </td>
+    <td align="center">
+      <a href="https://github.com/ksy173">
+        <img src="https://github.com/ksi076.png" width="120px;" alt=""/>
+        <br />
+        <sub><b>ksi076</b></sub>
+      </a>
+      <br />
+      Kim Seil
+    </td>
+    <td align="center">
+      <a href="https://github.com/mrgong0515">
+        <img src="https://github.com/qkrrkdtj.png" width="120px;" alt=""/>
+        <br />
+        <sub><b>qkrrkdtj</b></sub>
+      </a>
+      <br />
+      Park Kangseo
+    </td>
+    <td align="center">
+      <a href="https://github.com/kyb7640-gif">
+        <img src="https://github.com/miggh2.png" width="120px;" alt=""/>
+        <br />
+        <sub><b>miggh2</b></sub>
+      </a>
+      <br />
+      Lee Gyeonghwan
+    </td>
+  </tr>
+</table>
+
+---
+
