@@ -306,7 +306,7 @@
       <a href="https://github.com/ksi076">
         <img src="https://github.com/ksi076.png" width="120px;" alt=""/>
         <br />
-        <sub><b>kkyle9104</b></sub>
+        <sub><b>김세일</b></sub>
       </a>
       <br />
       Kim Byunghyun
@@ -315,7 +315,7 @@
       <a href="https://github.com/ksy173">
         <img src="https://github.com/ksy173.png" width="120px;" alt=""/>
         <br />
-        <sub><b>ksi076</b></sub>
+        <sub><b>권수연</b></sub>
       </a>
       <br />
       Kim Seil
@@ -324,7 +324,7 @@
       <a href="https://github.com/mrgong0515">
         <img src="https://github.com/mrgong0515.png" width="120px;" alt=""/>
         <br />
-        <sub><b>qkrrkdtj</b></sub>
+        <sub><b>공성우</b></sub>
       </a>
       <br />
       Park Kangseo
@@ -333,7 +333,7 @@
       <a href="https://github.com/kyb7640-gif">
         <img src="https://github.com/kyb7640-gif.png" width="120px;" alt=""/>
         <br />
-        <sub><b>miggh2</b></sub>
+        <sub><b>김용빈</b></sub>
       </a>
       <br />
       Lee Gyeonghwan
