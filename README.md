@@ -304,7 +304,7 @@
   <tr>
     <td align="center">
       <a href="https://github.com/ksi076">
-        <img src="https://github.com/kkyle9104.png" width="120px;" alt=""/>
+        <img src="https://github.com/ksi076.png" width="120px;" alt=""/>
         <br />
         <sub><b>kkyle9104</b></sub>
       </a>
@@ -313,7 +313,7 @@
     </td>
     <td align="center">
       <a href="https://github.com/ksy173">
-        <img src="https://github.com/ksi076.png" width="120px;" alt=""/>
+        <img src="https://github.com/ksy173.png" width="120px;" alt=""/>
         <br />
         <sub><b>ksi076</b></sub>
       </a>
@@ -322,7 +322,7 @@
     </td>
     <td align="center">
       <a href="https://github.com/mrgong0515">
-        <img src="https://github.com/qkrrkdtj.png" width="120px;" alt=""/>
+        <img src="https://github.com/mrgong0515.png" width="120px;" alt=""/>
         <br />
         <sub><b>qkrrkdtj</b></sub>
       </a>
@@ -331,7 +331,7 @@
     </td>
     <td align="center">
       <a href="https://github.com/kyb7640-gif">
-        <img src="https://github.com/miggh2.png" width="120px;" alt=""/>
+        <img src="https://github.com/kyb7640-gif.png" width="120px;" alt=""/>
         <br />
         <sub><b>miggh2</b></sub>
       </a>
