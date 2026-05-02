@@ -306,37 +306,37 @@
       <a href="https://github.com/ksi076">
         <img src="https://github.com/ksi076.png" width="120px;" alt=""/>
         <br />
-        <sub><b>김세일</b></sub>
+        <sub><b>ksi076</b></sub>
       </a>
       <br />
-      Kim Byunghyun
+      김세일
     </td>
     <td align="center">
       <a href="https://github.com/ksy173">
         <img src="https://github.com/ksy173.png" width="120px;" alt=""/>
         <br />
-        <sub><b>권수연</b></sub>
+        <sub><b>ksy173</b></sub>
       </a>
       <br />
-      Kim Seil
+      권수연
     </td>
     <td align="center">
       <a href="https://github.com/mrgong0515">
         <img src="https://github.com/mrgong0515.png" width="120px;" alt=""/>
         <br />
-        <sub><b>공성우</b></sub>
+        <sub><b>mrgong0515</b></sub>
       </a>
       <br />
-      Park Kangseo
+      공성우
     </td>
     <td align="center">
       <a href="https://github.com/kyb7640-gif">
         <img src="https://github.com/kyb7640-gif.png" width="120px;" alt=""/>
         <br />
-        <sub><b>김용빈</b></sub>
+        <sub><b>kyb7640-gif</b></sub>
       </a>
       <br />
-      Lee Gyeonghwan
+      김용빈
     </td>
   </tr>
 </table>
