@@ -19,6 +19,7 @@
   - XPT2046 Touch Controller
   - INTEL RealSense Depth Camera D435i
   - PILOMAX USB 웹캠
+  - 
 
 - **주요 기능:**
   ![구성도](img/구성도1.png)
