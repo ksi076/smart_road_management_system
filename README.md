@@ -143,6 +143,7 @@
 
 ## 🎥 시연 영상
 
+
 ### [횡단보도 무단횡단 감지 시연 (클릭 시 전체영상화면 재생)](https://drive.google.com/file/d/1JJZ4wy2REE9QvrCth4uMI0Oh-UzQre7v/view?usp=sharing)
 
 <div>
@@ -291,11 +292,11 @@
 ## 📈 향후 개선 방향
 
 - 보행자 세분화
-  ex) 유모차, 휠체어, 보행 보조기
+    ex) 유모차, 휠체어, 보행 보조기
 - 도로에서의 위험 요소 인식
-  ex) 낙하물 및 장애물, 쓰레기, 타이머, 동물 등
+    ex) 낙하물 및 장애물, 쓰레기, 타이머, 동물 등
 - 자율주행 및 스마트차량
-  ex) V2X(vehicle to Everything)통신 연동
+    ex) V2X(vehicle to Everything)통신 연동
 
 ---
 
